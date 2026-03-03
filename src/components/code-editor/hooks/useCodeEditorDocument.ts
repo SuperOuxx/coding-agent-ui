@@ -17,6 +17,7 @@ const getErrorMessage = (error: unknown) => {
 
 export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocumentParams) => {
   const [content, setContent] = useState('');
+  const [lastSavedContent, setLastSavedContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -35,6 +36,7 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
         // Diff payload may already include full old/new snapshots, so avoid disk read.
         if (file.diffInfo && fileDiffNewString !== undefined && fileDiffOldString !== undefined) {
           setContent(fileDiffNewString);
+          setLastSavedContent(fileDiffNewString);
           setLoading(false);
           return;
         }
@@ -50,10 +52,13 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
 
         const data = await response.json();
         setContent(data.content);
+        setLastSavedContent(data.content);
       } catch (error) {
         const message = getErrorMessage(error);
+        const errorContent = `// Error loading file: ${message}\n// File: ${fileName}\n// Path: ${filePath}`;
         console.error('Error loading file:', error);
-        setContent(`// Error loading file: ${message}\n// File: ${fileName}\n// Path: ${filePath}`);
+        setContent(errorContent);
+        setLastSavedContent(errorContent);
       } finally {
         setLoading(false);
       }
@@ -87,12 +92,15 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
 
       await response.json();
 
+      setLastSavedContent(content);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
+      return true;
     } catch (error) {
       const message = getErrorMessage(error);
       console.error('Error saving file:', error);
       setSaveError(message);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -120,6 +128,7 @@ export const useCodeEditorDocument = ({ file, projectPath }: UseCodeEditorDocume
     saving,
     saveSuccess,
     saveError,
+    isDirty: content !== lastSavedContent,
     handleSave,
     handleDownload,
   };

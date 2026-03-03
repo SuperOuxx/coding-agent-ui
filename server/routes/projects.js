@@ -2,8 +2,16 @@ import express from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { createHash } from 'crypto';
 import os from 'os';
-import { addProjectManually } from '../projects.js';
+import multer from 'multer';
+import { getWorkspacesRoot } from '../config.js';
+import {
+  addProjectManually,
+  extractProjectDirectory,
+  getProjectUploadsDirectoryByPath,
+  initializeProjectUploadsDirectoryByPath,
+} from '../projects.js';
 
 const router = express.Router();
 
@@ -11,9 +19,6 @@ function sanitizeGitError(message, token) {
   if (!message || !token) return message;
   return message.replace(new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '***');
 }
-
-// Configure allowed workspace root (defaults to user's home directory)
-export const WORKSPACES_ROOT = process.env.WORKSPACES_ROOT || os.homedir();
 
 // System-critical paths that should never be used as workspace directories
 export const FORBIDDEN_PATHS = [
@@ -43,6 +48,244 @@ export const FORBIDDEN_PATHS = [
   'C:\\$Recycle.Bin'
 ];
 
+const DEFAULT_UPLOADS_DIRECTORY = 'upload_files';
+const MAX_UPLOAD_FILE_SIZE = 50 * 1024 * 1024;
+const IGNORED_SCAN_DIRECTORIES = new Set([
+  '.git',
+  'node_modules',
+  '.next',
+  'dist',
+  'build',
+  '.cache',
+  '.turbo',
+]);
+
+const uploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(
+      os.tmpdir(),
+      'claudecodeui-file-uploads',
+      String(req.user?.id ?? 'anonymous'),
+    );
+
+    fs.mkdir(uploadDir, { recursive: true })
+      .then(() => cb(null, uploadDir))
+      .catch((error) => cb(error));
+  },
+  filename: (req, file, cb) => {
+    const originalExt = path.extname(file.originalname).replace(/[^.\w-]/g, '');
+    const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${originalExt}`;
+    cb(null, filename);
+  },
+});
+
+const uploadSingleFile = multer({
+  storage: uploadStorage,
+  limits: {
+    fileSize: MAX_UPLOAD_FILE_SIZE,
+    files: 1,
+  },
+}).single('file');
+
+function toPosixPath(inputPath) {
+  return inputPath.split(path.sep).join('/');
+}
+
+function normalizeComparablePath(inputPath) {
+  if (!inputPath || typeof inputPath !== 'string') {
+    return '';
+  }
+
+  const withoutLongPathPrefix = inputPath.startsWith('\\\\?\\')
+    ? inputPath.slice(4)
+    : inputPath;
+  const normalized = path.resolve(path.normalize(withoutLongPathPrefix.trim()));
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
+function isSamePathOrWithin(targetPath, parentPath) {
+  const normalizedTarget = normalizeComparablePath(targetPath);
+  const normalizedParent = normalizeComparablePath(parentPath);
+  if (!normalizedTarget || !normalizedParent) {
+    return false;
+  }
+  return (
+    normalizedTarget === normalizedParent
+    || normalizedTarget.startsWith(`${normalizedParent}${path.sep}`)
+  );
+}
+
+function expandHomePath(rawPath) {
+  if (typeof rawPath !== 'string') {
+    return '';
+  }
+  const trimmedPath = rawPath.trim();
+  if (!trimmedPath) {
+    return '';
+  }
+  if (trimmedPath === '~') {
+    return os.homedir();
+  }
+  if (trimmedPath.startsWith('~/') || trimmedPath.startsWith('~\\')) {
+    return path.join(os.homedir(), trimmedPath.slice(2));
+  }
+  return trimmedPath;
+}
+
+export function parseWorkspaceRoots() {
+  const rawRoots = getWorkspacesRoot();
+  const workspaceRoots = String(rawRoots || '')
+    .split(path.delimiter)
+    .map(expandHomePath)
+    .filter(Boolean)
+    .map((workspaceRoot) => path.resolve(workspaceRoot));
+
+  if (workspaceRoots.length > 0) {
+    return workspaceRoots;
+  }
+
+  return [os.homedir()];
+}
+
+export async function resolvePathAllowingNonexistent(inputPath) {
+  const absolutePath = path.resolve(inputPath);
+
+  try {
+    await fs.access(absolutePath);
+    return await fs.realpath(absolutePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+
+    const parentPath = path.dirname(absolutePath);
+    try {
+      const parentRealPath = await fs.realpath(parentPath);
+      return path.join(parentRealPath, path.basename(absolutePath));
+    } catch (parentError) {
+      if (parentError.code === 'ENOENT') {
+        return absolutePath;
+      }
+      throw parentError;
+    }
+  }
+}
+
+const createFileHash = async (filePath) => {
+  const fileBuffer = await fs.readFile(filePath);
+  return createHash('sha256').update(fileBuffer).digest('hex');
+};
+
+const moveFile = async (sourcePath, destinationPath) => {
+  try {
+    await fs.rename(sourcePath, destinationPath);
+  } catch (error) {
+    if (error.code !== 'EXDEV') {
+      throw error;
+    }
+    await fs.copyFile(sourcePath, destinationPath);
+    await fs.unlink(sourcePath).catch(() => undefined);
+  }
+};
+
+const safeRemoveFile = async (filePath) => {
+  if (!filePath) {
+    return;
+  }
+  await fs.unlink(filePath).catch(() => undefined);
+};
+
+const getNextNumericFilename = async (directoryPath, originalFilename) => {
+  const directoryEntries = await fs.readdir(directoryPath, { withFileTypes: true });
+  let maxNumericFilename = 0;
+
+  for (const entry of directoryEntries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+    const numericValue = Number.parseInt(path.parse(entry.name).name, 10);
+    if (Number.isFinite(numericValue) && numericValue > maxNumericFilename) {
+      maxNumericFilename = numericValue;
+    }
+  }
+
+  const nextNumericName = maxNumericFilename + 1;
+  const extension = path.extname(originalFilename);
+  return `${nextNumericName}${extension}`;
+};
+
+const listWorkspaceFilesByName = async (rootPath, targetFilename) => {
+  const matches = [];
+  const queue = [rootPath];
+
+  while (queue.length > 0) {
+    const currentPath = queue.pop();
+    let entries = [];
+
+    try {
+      entries = await fs.readdir(currentPath, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(currentPath, entry.name);
+
+      if (entry.isDirectory()) {
+        if (!IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
+          queue.push(entryPath);
+        }
+        continue;
+      }
+
+      if (entry.isFile() && entry.name === targetFilename) {
+        matches.push(entryPath);
+      }
+    }
+  }
+
+  return matches;
+};
+
+const findMatchingWorkspaceFile = async (projectDir, originalFilename, fileSize, tempFilePath) => {
+  const uploadHash = await createFileHash(tempFilePath);
+  const candidateFiles = await listWorkspaceFilesByName(projectDir, originalFilename);
+
+  for (const candidatePath of candidateFiles) {
+    try {
+      const candidateStats = await fs.stat(candidatePath);
+      if (!candidateStats.isFile() || candidateStats.size !== fileSize) {
+        continue;
+      }
+
+      const candidateHash = await createFileHash(candidatePath);
+      if (candidateHash === uploadHash) {
+        return candidatePath;
+      }
+    } catch {
+      // Skip unreadable files and keep scanning.
+    }
+  }
+
+  return null;
+};
+
+const resolveProjectDirectory = async (projectName) => {
+  const decodedProjectName = decodeURIComponent(projectName);
+  const projectDir = await extractProjectDirectory(decodedProjectName);
+  if (!projectDir) {
+    throw new Error(`Project not found: ${decodedProjectName}`);
+  }
+
+  const resolvedProjectDir = path.resolve(projectDir);
+  const projectStats = await fs.stat(resolvedProjectDir);
+  if (!projectStats.isDirectory()) {
+    throw new Error(`Project path is not a directory: ${resolvedProjectDir}`);
+  }
+
+  return resolvedProjectDir;
+};
+
 /**
  * Validates that a path is safe for workspace operations
  * @param {string} requestedPath - The path to validate
@@ -51,7 +294,7 @@ export const FORBIDDEN_PATHS = [
 export async function validateWorkspacePath(requestedPath) {
   try {
     // Resolve to absolute path
-    let absolutePath = path.resolve(requestedPath);
+    const absolutePath = path.resolve(requestedPath);
 
     // Check if path is a forbidden system directory
     const normalizedPath = path.normalize(absolutePath);
@@ -81,44 +324,19 @@ export async function validateWorkspacePath(requestedPath) {
       }
     }
 
-    // Try to resolve the real path (following symlinks)
-    let realPath;
-    try {
-      // Check if path exists to resolve real path
-      await fs.access(absolutePath);
-      realPath = await fs.realpath(absolutePath);
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        // Path doesn't exist yet - check parent directory
-        let parentPath = path.dirname(absolutePath);
-        try {
-          const parentRealPath = await fs.realpath(parentPath);
+    const realPath = await resolvePathAllowingNonexistent(absolutePath);
+    const workspaceRoots = parseWorkspaceRoots();
+    const resolvedWorkspaceRoots = await Promise.all(
+      workspaceRoots.map((workspaceRoot) => resolvePathAllowingNonexistent(workspaceRoot)),
+    );
+    const isAllowedRoot = resolvedWorkspaceRoots.some((workspaceRoot) => (
+      isSamePathOrWithin(realPath, workspaceRoot)
+    ));
 
-          // Reconstruct the full path with real parent
-          realPath = path.join(parentRealPath, path.basename(absolutePath));
-        } catch (parentError) {
-          if (parentError.code === 'ENOENT') {
-            // Parent doesn't exist either - use the absolute path as-is
-            // We'll validate it's within allowed root
-            realPath = absolutePath;
-          } else {
-            throw parentError;
-          }
-        }
-      } else {
-        throw error;
-      }
-    }
-
-    // Resolve the workspace root to its real path
-    const resolvedWorkspaceRoot = await fs.realpath(WORKSPACES_ROOT);
-
-    // Ensure the resolved path is contained within the allowed workspace root
-    if (!realPath.startsWith(resolvedWorkspaceRoot + path.sep) &&
-        realPath !== resolvedWorkspaceRoot) {
+    if (!isAllowedRoot) {
       return {
         valid: false,
-        error: `Workspace path must be within the allowed workspace root: ${WORKSPACES_ROOT}`
+        error: `Workspace path must be within the allowed workspace root: ${workspaceRoots.join(path.delimiter)}`
       };
     }
 
@@ -133,8 +351,10 @@ export async function validateWorkspacePath(requestedPath) {
         const resolvedTarget = path.resolve(path.dirname(absolutePath), linkTarget);
         const realTarget = await fs.realpath(resolvedTarget);
 
-        if (!realTarget.startsWith(resolvedWorkspaceRoot + path.sep) &&
-            realTarget !== resolvedWorkspaceRoot) {
+        const symlinkInAllowedRoots = resolvedWorkspaceRoots.some((workspaceRoot) => (
+          isSamePathOrWithin(realTarget, workspaceRoot)
+        ));
+        if (!symlinkInAllowedRoots) {
           return {
             valid: false,
             error: 'Symlink target is outside the allowed workspace root'
@@ -160,6 +380,70 @@ export async function validateWorkspacePath(requestedPath) {
     };
   }
 }
+
+router.post('/:projectName/files/init', async (req, res) => {
+  try {
+    const projectDir = await resolveProjectDirectory(req.params.projectName);
+    const { uploadsDirectory, created } = await initializeProjectUploadsDirectoryByPath(projectDir);
+
+    res.json({
+      success: true,
+      created,
+      uploadsDirectory,
+      referencePrefix: `@${uploadsDirectory}/`,
+    });
+  } catch (error) {
+    console.error('Error initializing uploads directory:', error);
+    res.status(500).json({ error: error.message || 'Failed to initialize uploads directory' });
+  }
+});
+
+router.post('/:projectName/files/upload', (req, res) => {
+  uploadSingleFile(req, res, async (uploadError) => {
+    if (uploadError) {
+      return res.status(400).json({ error: uploadError.message || 'File upload failed' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file provided' });
+    }
+
+    const tempFilePath = req.file.path;
+
+    try {
+      const projectDir = await resolveProjectDirectory(req.params.projectName);
+      const uploadsDirectory = await getProjectUploadsDirectoryByPath(projectDir);
+      const normalizedUploadsDirectory = uploadsDirectory || DEFAULT_UPLOADS_DIRECTORY;
+      const uploadsPath = path.join(projectDir, normalizedUploadsDirectory);
+      await fs.mkdir(uploadsPath, { recursive: true });
+
+      const existingWorkspaceFile = await findMatchingWorkspaceFile(
+        projectDir,
+        req.file.originalname,
+        req.file.size,
+        tempFilePath,
+      );
+
+      if (existingWorkspaceFile) {
+        await safeRemoveFile(tempFilePath);
+        const relativePath = toPosixPath(path.relative(projectDir, existingWorkspaceFile));
+        const reference = `@${relativePath}`;
+        return res.json({ success: true, reference, reusedExisting: true });
+      }
+
+      const newFilename = await getNextNumericFilename(uploadsPath, req.file.originalname);
+      const destinationPath = path.join(uploadsPath, newFilename);
+      await moveFile(tempFilePath, destinationPath);
+
+      const reference = `@${toPosixPath(path.join(normalizedUploadsDirectory, newFilename))}`;
+      res.json({ success: true, reference, filename: newFilename, reusedExisting: false });
+    } catch (error) {
+      await safeRemoveFile(tempFilePath);
+      console.error('Error uploading project file:', error);
+      res.status(500).json({ error: error.message || 'Failed to upload file' });
+    }
+  });
+});
 
 /**
  * Create a new workspace
@@ -215,6 +499,7 @@ router.post('/create-workspace', async (req, res) => {
 
       // Add the existing workspace to the project list
       const project = await addProjectManually(absolutePath);
+      await initializeProjectUploadsDirectoryByPath(project.path || absolutePath);
 
       return res.json({
         success: true,
@@ -280,6 +565,7 @@ router.post('/create-workspace', async (req, res) => {
 
         // Add the cloned repo path to the project list
         const project = await addProjectManually(clonePath);
+        await initializeProjectUploadsDirectoryByPath(project.path || clonePath);
 
         return res.json({
           success: true,
@@ -290,6 +576,7 @@ router.post('/create-workspace', async (req, res) => {
 
       // Add the new workspace to the project list (no clone)
       const project = await addProjectManually(absolutePath);
+      await initializeProjectUploadsDirectoryByPath(project.path || absolutePath);
 
       return res.json({
         success: true,
@@ -435,6 +722,7 @@ router.get('/clone-progress', async (req, res) => {
       if (code === 0) {
         try {
           const project = await addProjectManually(clonePath);
+          await initializeProjectUploadsDirectoryByPath(project.path || clonePath);
           sendEvent('complete', { project, message: 'Repository cloned successfully' });
         } catch (error) {
           sendEvent('error', { message: `Clone succeeded but failed to add project: ${error.message}` });

@@ -16,6 +16,9 @@ type SidebarContentProps = {
   onClearSearchFilter: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  onInitializeUploads: () => void;
+  canInitializeUploads: boolean;
+  isInitializingUploads: boolean;
   onCreateProject: () => void;
   onCollapseSidebar: () => void;
   updateAvailable: boolean;
@@ -37,6 +40,9 @@ export default function SidebarContent({
   onClearSearchFilter,
   onRefresh,
   isRefreshing,
+  onInitializeUploads,
+  canInitializeUploads,
+  isInitializingUploads,
   onCreateProject,
   onCollapseSidebar,
   updateAvailable,
@@ -62,6 +68,9 @@ export default function SidebarContent({
         onClearSearchFilter={onClearSearchFilter}
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
+        onInitializeUploads={onInitializeUploads}
+        canInitializeUploads={canInitializeUploads}
+        isInitializingUploads={isInitializingUploads}
         onCreateProject={onCreateProject}
         onCollapseSidebar={onCollapseSidebar}
         t={t}

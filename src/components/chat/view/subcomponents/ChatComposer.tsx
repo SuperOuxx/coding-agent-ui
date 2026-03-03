@@ -34,6 +34,16 @@ interface SlashCommand {
   [key: string]: unknown;
 }
 
+interface SkillOption {
+  name: string;
+  value: string;
+  source: 'global' | 'project';
+}
+
+function formatSkillOptionLabel(skill: SkillOption): string {
+  return `${skill.name} (${skill.source})`;
+}
+
 interface ChatComposerProps {
   pendingPermissionRequests: PendingPermissionRequest[];
   handlePermissionDecision: (
@@ -49,6 +59,9 @@ interface ChatComposerProps {
   onModeSwitch: () => void;
   thinkingMode: string;
   setThinkingMode: Dispatch<SetStateAction<string>>;
+  skills: SkillOption[];
+  selectedSkill: string;
+  onSkillSelect: (skillValue: string) => void;
   tokenBudget: { used?: number; total?: number } | null;
   slashCommandsCount: number;
   onToggleCommandMenu: () => void;
@@ -59,10 +72,10 @@ interface ChatComposerProps {
   onScrollToBottom: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>) => void;
   isDragActive: boolean;
-  attachedImages: File[];
-  onRemoveImage: (index: number) => void;
-  uploadingImages: Map<string, number>;
-  imageErrors: Map<string, string>;
+  attachedFiles: File[];
+  onRemoveFile: (index: number) => void;
+  uploadingFiles: Map<string, number>;
+  fileErrors: Map<string, string>;
   showFileDropdown: boolean;
   filteredFiles: MentionableFile[];
   selectedFileIndex: number;
@@ -75,7 +88,7 @@ interface ChatComposerProps {
   frequentCommands: SlashCommand[];
   getRootProps: (...args: unknown[]) => Record<string, unknown>;
   getInputProps: (...args: unknown[]) => Record<string, unknown>;
-  openImagePicker: () => void;
+  openAttachmentPicker: () => void;
   inputHighlightRef: RefObject<HTMLDivElement>;
   renderInputWithMentions: (text: string) => ReactNode;
   textareaRef: RefObject<HTMLTextAreaElement>;
@@ -106,6 +119,9 @@ export default function ChatComposer({
   onModeSwitch,
   thinkingMode,
   setThinkingMode,
+  skills,
+  selectedSkill,
+  onSkillSelect,
   tokenBudget,
   slashCommandsCount,
   onToggleCommandMenu,
@@ -116,10 +132,10 @@ export default function ChatComposer({
   onScrollToBottom,
   onSubmit,
   isDragActive,
-  attachedImages,
-  onRemoveImage,
-  uploadingImages,
-  imageErrors,
+  attachedFiles,
+  onRemoveFile,
+  uploadingFiles,
+  fileErrors,
   showFileDropdown,
   filteredFiles,
   selectedFileIndex,
@@ -132,7 +148,7 @@ export default function ChatComposer({
   frequentCommands,
   getRootProps,
   getInputProps,
-  openImagePicker,
+  openAttachmentPicker,
   inputHighlightRef,
   renderInputWithMentions,
   textareaRef,
@@ -162,6 +178,7 @@ export default function ChatComposer({
   const hasQuestionPanel = pendingPermissionRequests.some(
     (r) => r.toolName === 'AskUserQuestion'
   );
+  const showSkillSelector = skills.length > 0 && (provider === 'claude' || provider === 'codex');
 
   // On mobile, when input is focused, float the input box at the bottom
   const mobileFloatingClass = isInputFocused
@@ -217,21 +234,21 @@ export default function ChatComposer({
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              <p className="text-sm font-medium">Drop images here</p>
+              <p className="text-sm font-medium">{t('input.dropFilesHere')}</p>
             </div>
           </div>
         )}
 
-        {attachedImages.length > 0 && (
+        {attachedFiles.length > 0 && (
           <div className="mb-2 p-2 bg-muted/40 rounded-xl">
             <div className="flex flex-wrap gap-2">
-              {attachedImages.map((file, index) => (
+              {attachedFiles.map((file, index) => (
                 <ImageAttachment
                   key={index}
                   file={file}
-                  onRemove={() => onRemoveImage(index)}
-                  uploadProgress={uploadingImages.get(file.name)}
-                  error={imageErrors.get(file.name)}
+                  onRemove={() => onRemoveFile(index)}
+                  uploadProgress={uploadingFiles.get(file.name)}
+                  error={fileErrors.get(file.name)}
                 />
               ))}
             </div>
@@ -275,6 +292,24 @@ export default function ChatComposer({
           frequentCommands={frequentCommands}
         />
 
+        {showSkillSelector && (
+          <div className="mb-2">
+            <select
+              id="skill-select"
+              value={selectedSkill}
+              onChange={(event) => onSkillSelect(event.target.value)}
+              className="w-full px-3 py-2 text-sm bg-card/90 border border-border/50 rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+            >
+              <option value="">Select a skill...</option>
+              {skills.map((skill) => (
+                <option key={skill.value} value={skill.value}>
+                  {formatSkillOptionLabel(skill)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div
           {...getRootProps()}
           className={`relative bg-card/80 backdrop-blur-sm rounded-2xl shadow-sm border border-border/50 focus-within:shadow-md focus-within:border-primary/30 focus-within:ring-1 focus-within:ring-primary/15 transition-all duration-200 overflow-hidden ${
@@ -308,9 +343,9 @@ export default function ChatComposer({
 
             <button
               type="button"
-              onClick={openImagePicker}
+              onClick={openAttachmentPicker}
               className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-accent/60 rounded-xl transition-colors"
-              title={t('input.attachImages')}
+              title={t('input.attachFiles')}
             >
               <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

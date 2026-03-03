@@ -1,15 +1,19 @@
 import { Code2, Download, Eye, Maximize2, Minimize2, Save, Settings as SettingsIcon, X } from 'lucide-react';
 import type { CodeEditorFile } from '../../types/types';
 
+type MarkdownEditorMode = 'default' | 'vditor';
+
 type CodeEditorHeaderProps = {
   file: CodeEditorFile;
   isSidebar: boolean;
   isFullscreen: boolean;
   isMarkdownFile: boolean;
   markdownPreview: boolean;
+  markdownEditorMode: MarkdownEditorMode;
   saving: boolean;
   saveSuccess: boolean;
   onToggleMarkdownPreview: () => void;
+  onSwitchMarkdownEditorMode: (mode: MarkdownEditorMode) => void;
   onOpenSettings: () => void;
   onDownload: () => void;
   onSave: () => void;
@@ -19,6 +23,8 @@ type CodeEditorHeaderProps = {
     showingChanges: string;
     editMarkdown: string;
     previewMarkdown: string;
+    defaultMarkdownEditor: string;
+    vditorMarkdownEditor: string;
     settings: string;
     download: string;
     save: string;
@@ -36,9 +42,11 @@ export default function CodeEditorHeader({
   isFullscreen,
   isMarkdownFile,
   markdownPreview,
+  markdownEditorMode,
   saving,
   saveSuccess,
   onToggleMarkdownPreview,
+  onSwitchMarkdownEditorMode,
   onOpenSettings,
   onDownload,
   onSave,
@@ -46,7 +54,14 @@ export default function CodeEditorHeader({
   onClose,
   labels,
 }: CodeEditorHeaderProps) {
-  const saveTitle = saveSuccess ? labels.saved : saving ? labels.saving : labels.save;
+  let saveTitle = labels.save;
+  if (saveSuccess) {
+    saveTitle = labels.saved;
+  } else if (saving) {
+    saveTitle = labels.saving;
+  }
+
+  const isUsingVditor = markdownEditorMode === 'vditor';
 
   return (
     <div className="flex items-center justify-between px-3 py-1.5 border-b border-border flex-shrink-0 min-w-0">
@@ -66,6 +81,35 @@ export default function CodeEditorHeader({
 
       <div className="flex items-center gap-0.5 md:gap-1 flex-shrink-0">
         {isMarkdownFile && (
+          <div className="flex items-center p-0.5 rounded-md bg-gray-100 dark:bg-gray-800">
+            <button
+              type="button"
+              onClick={() => onSwitchMarkdownEditorMode('default')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                !isUsingVditor
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title={labels.defaultMarkdownEditor}
+            >
+              {labels.defaultMarkdownEditor}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSwitchMarkdownEditorMode('vditor')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                isUsingVditor
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+              }`}
+              title={labels.vditorMarkdownEditor}
+            >
+              {labels.vditorMarkdownEditor}
+            </button>
+          </div>
+        )}
+
+        {isMarkdownFile && !isUsingVditor && (
           <button
             type="button"
             onClick={onToggleMarkdownPreview}

@@ -1,4 +1,4 @@
-import { FolderPlus, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
+import { FolderPlus, FolderUp, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
@@ -14,6 +14,9 @@ type SidebarHeaderProps = {
   onClearSearchFilter: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  onInitializeUploads: () => void;
+  canInitializeUploads: boolean;
+  isInitializingUploads: boolean;
   onCreateProject: () => void;
   onCollapseSidebar: () => void;
   t: TFunction;
@@ -29,6 +32,9 @@ export default function SidebarHeader({
   onClearSearchFilter,
   onRefresh,
   isRefreshing,
+  onInitializeUploads,
+  canInitializeUploads,
+  isInitializingUploads,
   onCreateProject,
   onCollapseSidebar,
   t,
@@ -78,6 +84,16 @@ export default function SidebarHeader({
                   isRefreshing ? 'animate-spin' : ''
                 }`}
               />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-accent/80 rounded-lg"
+              onClick={onInitializeUploads}
+              disabled={!canInitializeUploads || isInitializingUploads}
+              title={t('tooltips.initializeUploads')}
+            >
+              <FolderUp className={`w-3.5 h-3.5 ${isInitializingUploads ? 'animate-pulse' : ''}`} />
             </Button>
             <Button
               variant="ghost"
@@ -151,6 +167,14 @@ export default function SidebarHeader({
               disabled={isRefreshing}
             >
               <RefreshCw className={`w-4 h-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center active:scale-95 transition-all"
+              onClick={onInitializeUploads}
+              disabled={!canInitializeUploads || isInitializingUploads}
+              title={t('tooltips.initializeUploads')}
+            >
+              <FolderUp className={`w-4 h-4 text-muted-foreground ${isInitializingUploads ? 'animate-pulse' : ''}`} />
             </button>
             <button
               className="w-8 h-8 rounded-lg bg-primary/90 text-primary-foreground flex items-center justify-center active:scale-95 transition-all"

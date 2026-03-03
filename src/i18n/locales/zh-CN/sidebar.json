@@ -38,6 +38,7 @@
     "viewEnvironments": "查看环境",
     "hideSidebar": "隐藏侧边栏",
     "createProject": "创建新项目",
+    "initializeUploads": "为当前项目初始化上传目录",
     "refresh": "刷新项目和会话 (Ctrl+R)",
     "renameProject": "重命名项目 (F2)",
     "deleteProject": "删除空项目 (Delete)",

@@ -9,6 +9,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppContent from './components/app/AppContent';
 import i18n from './i18n/config.js';
 
+import { Agentation } from 'agentation';
+
 export default function App() {
   return (
     <I18nextProvider i18n={i18n}>
@@ -30,6 +32,7 @@ export default function App() {
           </WebSocketProvider>
         </AuthProvider>
       </ThemeProvider>
+      <Agentation />
     </I18nextProvider>
   );
 }

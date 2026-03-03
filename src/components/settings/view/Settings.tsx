@@ -10,6 +10,7 @@ import AppearanceSettingsTab from '../view/tabs/AppearanceSettingsTab';
 import CredentialsSettingsTab from '../view/tabs/api-settings/CredentialsSettingsTab';
 import GitSettingsTab from '../view/tabs/git-settings/GitSettingsTab';
 import TasksSettingsTab from '../view/tabs/tasks-settings/TasksSettingsTab';
+import WorkspaceSettingsTab from '../view/tabs/workspace-settings/WorkspaceSettingsTab';
 import { useSettingsController } from '../hooks/useSettingsController';
 import type { AgentProvider, SettingsProject, SettingsProps } from '../types/types';
 
@@ -23,6 +24,32 @@ type LoginModalProps = {
 };
 
 const LoginModalComponent = LoginModal as unknown as (props: LoginModalProps) => JSX.Element;
+
+function getAuthStatusByProvider({
+  loginProvider,
+  claudeAuthenticated,
+  cursorAuthenticated,
+  codexAuthenticated,
+}: {
+  loginProvider: AgentProvider | '';
+  claudeAuthenticated: boolean;
+  cursorAuthenticated: boolean;
+  codexAuthenticated: boolean;
+}) {
+  if (loginProvider === 'claude') {
+    return claudeAuthenticated;
+  }
+
+  if (loginProvider === 'cursor') {
+    return cursorAuthenticated;
+  }
+
+  if (loginProvider === 'codex') {
+    return codexAuthenticated;
+  }
+
+  return false;
+}
 
 function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: SettingsProps) {
   const { t } = useTranslation('settings');
@@ -86,13 +113,12 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
     return null;
   }
 
-  const isAuthenticated = loginProvider === 'claude'
-    ? claudeAuthStatus.authenticated
-    : loginProvider === 'cursor'
-      ? cursorAuthStatus.authenticated
-      : loginProvider === 'codex'
-        ? codexAuthStatus.authenticated
-        : false;
+  const isAuthenticated = getAuthStatusByProvider({
+    loginProvider,
+    claudeAuthenticated: claudeAuthStatus.authenticated,
+    cursorAuthenticated: cursorAuthStatus.authenticated,
+    codexAuthenticated: codexAuthStatus.authenticated,
+  });
 
   return (
     <div className="modal-backdrop fixed inset-0 flex items-center justify-center z-[9999] md:p-4 bg-background/95">
@@ -130,6 +156,8 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
             )}
 
             {activeTab === 'git' && <GitSettingsTab />}
+
+            {activeTab === 'workspace' && <WorkspaceSettingsTab />}
 
             {activeTab === 'agents' && (
               <AgentsSettingsTab

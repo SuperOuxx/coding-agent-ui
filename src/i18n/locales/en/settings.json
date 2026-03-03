@@ -84,11 +84,29 @@
     }
   },
   "mainTabs": {
+    "workspace": "Workspace",
     "agents": "Agents",
     "appearance": "Appearance",
     "git": "Git",
     "apiTokens": "API & Tokens",
     "tasks": "Tasks"
+  },
+  "workspaceSettings": {
+    "title": "Workspace Root",
+    "description": "Configure the allowed workspace root directory used by project creation and import validation.",
+    "inputLabel": "Workspace Root Path",
+    "inputHelp": "Supports multiple roots separated by the system delimiter (; on Windows, : on Unix).",
+    "rootPlaceholder": "e.g. ~/Projects or D:\\Projects",
+    "resolvedLabel": "Current Effective Workspace Root",
+    "resolvedHelp": "Resolved root after applying saved settings, environment fallback, and defaults.",
+    "actions": {
+      "save": "Save Settings",
+      "saving": "Saving..."
+    },
+    "status": {
+      "success": "Workspace root saved.",
+      "error": "Failed to save workspace root: {{message}}"
+    }
   },
   "appearanceSettings": {
     "darkMode": {

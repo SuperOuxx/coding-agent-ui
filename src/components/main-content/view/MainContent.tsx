@@ -60,13 +60,20 @@ function MainContent({
   const shouldShowTasksTab = Boolean(tasksEnabled && isTaskMasterInstalled);
 
   const {
+    openFiles,
+    activeFileId,
+    dirtyFileIds,
     editingFile,
     editorWidth,
     editorExpanded,
     hasManualWidth,
     resizeHandleRef,
     handleFileOpen,
+    handleActivateFile,
+    handleCloseFile,
     handleCloseEditor,
+    handleDirtyStateChange,
+    registerSaveHandler,
     handleToggleEditorExpand,
     handleResizeStart,
   } = useEditorSidebar({
@@ -161,6 +168,9 @@ function MainContent({
         </div>
 
         <EditorSidebar
+          openFiles={openFiles}
+          activeFileId={activeFileId}
+          dirtyFileIds={dirtyFileIds}
           editingFile={editingFile}
           isMobile={isMobile}
           editorExpanded={editorExpanded}
@@ -168,7 +178,11 @@ function MainContent({
           hasManualWidth={hasManualWidth}
           resizeHandleRef={resizeHandleRef}
           onResizeStart={handleResizeStart}
+          onActivateFile={handleActivateFile}
+          onCloseFile={handleCloseFile}
           onCloseEditor={handleCloseEditor}
+          onDirtyStateChange={handleDirtyStateChange}
+          onRegisterSaveHandler={registerSaveHandler}
           onToggleEditorExpand={handleToggleEditorExpand}
           projectPath={selectedProject.path}
           fillSpace={activeTab === 'files'}

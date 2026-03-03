@@ -104,6 +104,7 @@
     "disabled": "입력 비활성화",
     "attachFiles": "파일 첨부",
     "attachImages": "이미지 첨부",
+    "dropFilesHere": "여기에 파일 놓기",
     "send": "전송",
     "stop": "중지",
     "hintText": {

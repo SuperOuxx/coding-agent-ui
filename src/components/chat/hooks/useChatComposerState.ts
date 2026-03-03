@@ -10,7 +10,7 @@ import type {
   TouchEvent,
 } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { authenticatedFetch } from '../../../utils/api';
+import { api, authenticatedFetch } from '../../../utils/api';
 
 import { thinkingModes } from '../constants/thinkingModes';
 
@@ -77,12 +77,102 @@ interface CommandExecutionResult {
   hasFileIncludes?: boolean;
 }
 
+interface SkillOption {
+  name: string;
+  value: string;
+  source: 'global' | 'project';
+}
+
+interface SkillsApiResponse {
+  skills?: unknown;
+}
+
+const SKILL_ENABLED_PROVIDERS = new Set<SessionProvider>(['claude', 'codex']);
+const SKILL_PREFIX_PATTERN = /^[/$]\S+\s*/;
+
+function isSkillEnabledProvider(provider: SessionProvider): boolean {
+  return SKILL_ENABLED_PROVIDERS.has(provider);
+}
+
+function getProjectPath(project: Project | null): string {
+  if (!project) {
+    return '';
+  }
+  return project.fullPath || project.path || '';
+}
+
+function getSkillPrefix(provider: SessionProvider, skillValue: string): string {
+  if (provider === 'claude') {
+    return `/${skillValue} `;
+  }
+  return `$${skillValue} `;
+}
+
+function stripLeadingSkillPrefix(value: string): string {
+  return value.replace(SKILL_PREFIX_PATTERN, '');
+}
+
+function normalizeSkillOption(skill: unknown): SkillOption | null {
+  if (!skill || typeof skill !== 'object') {
+    return null;
+  }
+
+  const value = typeof (skill as { value?: unknown }).value === 'string'
+    ? (skill as { value: string }).value.trim()
+    : '';
+  if (!value) {
+    return null;
+  }
+
+  const rawName = (skill as { name?: unknown }).name;
+  const name = typeof rawName === 'string' && rawName.trim() ? rawName.trim() : value;
+  const source: SkillOption['source'] = (skill as { source?: unknown }).source === 'project'
+    ? 'project'
+    : 'global';
+
+  return { name, value, source };
+}
+
+function buildSkillsEndpoint(provider: SessionProvider, projectPath: string): string {
+  const searchParams = new URLSearchParams({ provider });
+  if (projectPath) {
+    searchParams.set('projectPath', projectPath);
+  }
+  return `/api/skills?${searchParams.toString()}`;
+}
+
 const createFakeSubmitEvent = () => {
   return { preventDefault: () => undefined } as unknown as FormEvent<HTMLFormElement>;
 };
 
 const isTemporarySessionId = (sessionId: string | null | undefined) =>
   Boolean(sessionId && sessionId.startsWith('new-session-'));
+
+const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
+const MAX_ATTACHMENTS = 10;
+const ATTACHMENT_SIZE_ERROR = 'File too large (max 50MB)';
+
+const normalizeUploadedReference = (reference: unknown): string => {
+  if (typeof reference !== 'string') {
+    return '';
+  }
+
+  const trimmedReference = reference.trim();
+  if (!trimmedReference) {
+    return '';
+  }
+
+  return trimmedReference.startsWith('@') ? trimmedReference : `@${trimmedReference}`;
+};
+
+const appendReferencesToMessage = (baseMessage: string, references: string[]): string => {
+  if (references.length === 0) {
+    return baseMessage;
+  }
+
+  const referencesText = references.join(' ');
+  return baseMessage.trim() ? `${baseMessage}\n${referencesText}` : referencesText;
+};
 
 export function useChatComposerState({
   selectedProject,
@@ -121,11 +211,13 @@ export function useChatComposerState({
     }
     return '';
   });
-  const [attachedImages, setAttachedImages] = useState<File[]>([]);
-  const [uploadingImages, setUploadingImages] = useState<Map<string, number>>(new Map());
-  const [imageErrors, setImageErrors] = useState<Map<string, string>>(new Map());
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<Map<string, number>>(new Map());
+  const [fileErrors, setFileErrors] = useState<Map<string, string>>(new Map());
   const [isTextareaExpanded, setIsTextareaExpanded] = useState(false);
   const [thinkingMode, setThinkingMode] = useState('none');
+  const [skills, setSkills] = useState<SkillOption[]>([]);
+  const [selectedSkill, setSelectedSkill] = useState('');
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHighlightRef = useRef<HTMLDivElement>(null);
@@ -274,6 +366,19 @@ export function useChatComposerState({
     }, 0);
   }, [setChatMessages]);
 
+  const resolveCurrentModel = useCallback(() => {
+    switch (provider) {
+      case 'cursor':
+        return cursorModel;
+      case 'codex':
+        return codexModel;
+      case 'gemini':
+        return geminiModel;
+      default:
+        return claudeModel;
+    }
+  }, [claudeModel, codexModel, cursorModel, geminiModel, provider]);
+
   const executeCommand = useCallback(
     async (command: SlashCommand, rawInput?: string) => {
       if (!command || !selectedProject) {
@@ -291,7 +396,7 @@ export function useChatComposerState({
           projectName: selectedProject.name,
           sessionId: currentSessionId,
           provider,
-          model: provider === 'cursor' ? cursorModel : provider === 'codex' ? codexModel : provider === 'gemini' ? geminiModel : claudeModel,
+          model: resolveCurrentModel(),
           tokenUsage: tokenBudget,
         };
 
@@ -350,6 +455,7 @@ export function useChatComposerState({
       handleCustomCommand,
       input,
       provider,
+      resolveCurrentModel,
       selectedProject,
       setChatMessages,
       tokenBudget,
@@ -383,6 +489,7 @@ export function useChatComposerState({
     selectedFileIndex,
     renderInputWithMentions,
     selectFile,
+    registerFileMentions,
     setCursorPosition,
     handleFileMentionsKeyDown,
   } = useFileMentions({
@@ -400,28 +507,71 @@ export function useChatComposerState({
     inputHighlightRef.current.scrollLeft = target.scrollLeft;
   }, []);
 
-  const handleImageFiles = useCallback((files: File[]) => {
-    const validFiles = files.filter((file) => {
+  const applySkillPrefix = useCallback((skillValue: string) => {
+    if (!skillValue) {
+      return;
+    }
+
+    const skillPrefix = getSkillPrefix(provider, skillValue);
+    setInput((previousInput) => {
+      const cleanedInput = stripLeadingSkillPrefix(previousInput);
+      const nextInput = `${skillPrefix}${cleanedInput}`;
+      inputValueRef.current = nextInput;
+      return nextInput;
+    });
+
+    setTimeout(() => {
+      if (!textareaRef.current) {
+        return;
+      }
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }, 0);
+  }, [provider]);
+
+  const handleSkillSelect = useCallback((skillValue: string) => {
+    setSelectedSkill(skillValue);
+    if (!skillValue) {
+      return;
+    }
+    applySkillPrefix(skillValue);
+  }, [applySkillPrefix]);
+
+  const resetAttachmentState = useCallback(() => {
+    setAttachedFiles([]);
+    setUploadingFiles(new Map());
+    setFileErrors(new Map());
+  }, []);
+
+  const resetComposerState = useCallback(() => {
+    setInput('');
+    inputValueRef.current = '';
+    resetCommandMenuState();
+    resetAttachmentState();
+    setIsTextareaExpanded(false);
+    setThinkingMode('none');
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [resetAttachmentState, resetCommandMenuState]);
+
+  const handleAttachmentFiles = useCallback((files: File[]) => {
+    const oversizedFileNames: string[] = [];
+
+    const acceptedFiles = files.filter((file) => {
       try {
         if (!file || typeof file !== 'object') {
           console.warn('Invalid file object:', file);
           return false;
         }
 
-        if (!file.type || !file.type.startsWith('image/')) {
+        if (typeof file.size !== 'number' || file.size > MAX_ATTACHMENT_SIZE) {
+          oversizedFileNames.push(file.name || 'Unknown file');
           return false;
         }
 
-        if (!file.size || file.size > 5 * 1024 * 1024) {
-          const fileName = file.name || 'Unknown file';
-          setImageErrors((previous) => {
-            const next = new Map(previous);
-            next.set(fileName, 'File too large (max 5MB)');
-            return next;
-          });
-          return false;
-        }
-
+        acceptedFiles.push(file);
         return true;
       } catch (error) {
         console.error('Error validating file:', error, file);
@@ -429,43 +579,58 @@ export function useChatComposerState({
       }
     });
 
-    if (validFiles.length > 0) {
-      setAttachedImages((previous) => [...previous, ...validFiles].slice(0, 5));
+    if (oversizedFileNames.length > 0) {
+      setFileErrors((previous) => {
+        const next = new Map(previous);
+        oversizedFileNames.forEach((name) => next.set(name, ATTACHMENT_SIZE_ERROR));
+        return next;
+      });
     }
+
+    if (acceptedFiles.length === 0) {
+      return;
+    }
+
+    setAttachedFiles((previous) => {
+      const deduped = new Map<string, File>();
+      [...previous, ...acceptedFiles].forEach((file) => {
+        const dedupeKey = `${file.name}:${file.size}:${file.lastModified}`;
+        deduped.set(dedupeKey, file);
+      });
+      return Array.from(deduped.values()).slice(0, MAX_ATTACHMENTS);
+    });
   }, []);
 
   const handlePaste = useCallback(
     (event: ClipboardEvent<HTMLTextAreaElement>) => {
       const items = Array.from(event.clipboardData.items);
+      const pastedFiles: File[] = [];
 
       items.forEach((item) => {
-        if (!item.type.startsWith('image/')) {
+        if (item.kind !== 'file') {
           return;
         }
         const file = item.getAsFile();
         if (file) {
-          handleImageFiles([file]);
+          pastedFiles.push(file);
         }
       });
 
-      if (items.length === 0 && event.clipboardData.files.length > 0) {
-        const files = Array.from(event.clipboardData.files);
-        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-        if (imageFiles.length > 0) {
-          handleImageFiles(imageFiles);
-        }
+      if (pastedFiles.length === 0 && event.clipboardData.files.length > 0) {
+        pastedFiles.push(...Array.from(event.clipboardData.files));
+      }
+
+      if (pastedFiles.length > 0) {
+        handleAttachmentFiles(pastedFiles);
       }
     },
-    [handleImageFiles],
+    [handleAttachmentFiles],
   );
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'],
-    },
-    maxSize: 5 * 1024 * 1024,
-    maxFiles: 5,
-    onDrop: handleImageFiles,
+    maxSize: MAX_ATTACHMENT_SIZE,
+    maxFiles: MAX_ATTACHMENTS,
+    onDrop: handleAttachmentFiles,
     noClick: true,
     noKeyboard: true,
   });
@@ -488,16 +653,7 @@ export function useChatComposerState({
         const matchedCommand = slashCommands.find((cmd: SlashCommand) => cmd.name === commandName);
         if (matchedCommand) {
           executeCommand(matchedCommand, trimmedInput);
-          setInput('');
-          inputValueRef.current = '';
-          setAttachedImages([]);
-          setUploadingImages(new Map());
-          setImageErrors(new Map());
-          resetCommandMenuState();
-          setIsTextareaExpanded(false);
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-          }
+          resetComposerState();
           return;
         }
       }
@@ -508,34 +664,47 @@ export function useChatComposerState({
         messageContent = `${selectedThinkingMode.prefix}: ${currentInput}`;
       }
 
-      let uploadedImages: unknown[] = [];
-      if (attachedImages.length > 0) {
-        const formData = new FormData();
-        attachedImages.forEach((file) => {
-          formData.append('images', file);
-        });
-
+      let displayedUserMessageContent = currentInput;
+      if (attachedFiles.length > 0) {
+        const uploadedReferences: string[] = [];
         try {
-          const response = await authenticatedFetch(`/api/projects/${selectedProject.name}/upload-images`, {
-            method: 'POST',
-            headers: {},
-            body: formData,
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to upload images');
+          const initResponse = await api.initializeUploads(selectedProject.name);
+          if (!initResponse.ok) {
+            throw new Error('Failed to initialize upload directory');
           }
 
-          const result = await response.json();
-          uploadedImages = result.images;
+          for (const file of attachedFiles) {
+            const response = await api.uploadFile(selectedProject.name, file);
+            if (!response.ok) {
+              throw new Error(`Failed to upload file: ${file.name}`);
+            }
+
+            const result = await response.json();
+            const normalizedReference = normalizeUploadedReference(result?.reference);
+
+            if (!normalizedReference) {
+              throw new Error(`Missing upload reference for file: ${file.name}`);
+            }
+
+            uploadedReferences.push(normalizedReference);
+          }
+
+          if (uploadedReferences.length > 0) {
+            registerFileMentions(uploadedReferences);
+            messageContent = appendReferencesToMessage(messageContent, uploadedReferences);
+            displayedUserMessageContent = appendReferencesToMessage(
+              displayedUserMessageContent,
+              uploadedReferences,
+            );
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error';
-          console.error('Image upload failed:', error);
+          console.error('File upload failed:', error);
           setChatMessages((previous) => [
             ...previous,
             {
               type: 'error',
-              content: `Failed to upload images: ${message}`,
+              content: `Failed to upload files: ${message}`,
               timestamp: new Date(),
             },
           ]);
@@ -545,8 +714,7 @@ export function useChatComposerState({
 
       const userMessage: ChatMessage = {
         type: 'user',
-        content: currentInput,
-        images: uploadedImages as any,
+        content: displayedUserMessageContent,
         timestamp: new Date(),
       };
 
@@ -662,28 +830,16 @@ export function useChatComposerState({
             toolsSettings,
             permissionMode,
             model: claudeModel,
-            images: uploadedImages,
           },
         });
       }
 
-      setInput('');
-      inputValueRef.current = '';
-      resetCommandMenuState();
-      setAttachedImages([]);
-      setUploadingImages(new Map());
-      setImageErrors(new Map());
-      setIsTextareaExpanded(false);
-      setThinkingMode('none');
-
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
+      resetComposerState();
 
       safeLocalStorage.removeItem(`draft_input_${selectedProject.name}`);
     },
     [
-      attachedImages,
+      attachedFiles,
       claudeModel,
       codexModel,
       currentSessionId,
@@ -708,6 +864,8 @@ export function useChatComposerState({
       setIsUserScrolledUp,
       slashCommands,
       thinkingMode,
+      registerFileMentions,
+      resetComposerState,
     ],
   );
 
@@ -730,6 +888,62 @@ export function useChatComposerState({
       return next;
     });
   }, [selectedProject?.name]);
+
+  useEffect(() => {
+    const resetSkillState = () => {
+      setSkills([]);
+      setSelectedSkill('');
+    };
+
+    if (!selectedProject) {
+      resetSkillState();
+      return;
+    }
+
+    if (!isSkillEnabledProvider(provider)) {
+      resetSkillState();
+      return;
+    }
+
+    let active = true;
+    const loadSkills = async () => {
+      try {
+        const projectPath = getProjectPath(selectedProject);
+        const endpoint = buildSkillsEndpoint(provider, projectPath);
+        const response = await authenticatedFetch(endpoint);
+        if (!response.ok) {
+          throw new Error(`Failed to load skills (${response.status})`);
+        }
+
+        const payload = await response.json() as SkillsApiResponse;
+        const skillsPayload = Array.isArray(payload?.skills) ? payload.skills : [];
+        const nextSkills = skillsPayload
+          .map(normalizeSkillOption)
+          .filter((skill): skill is SkillOption => Boolean(skill));
+
+        if (!active) {
+          return;
+        }
+
+        setSkills(nextSkills);
+        setSelectedSkill((previousSkill) => (
+          nextSkills.some((skill) => skill.value === previousSkill) ? previousSkill : ''
+        ));
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        console.error('Error loading skills:', error);
+        resetSkillState();
+      }
+    };
+
+    loadSkills();
+
+    return () => {
+      active = false;
+    };
+  }, [provider, selectedProject?.fullPath, selectedProject?.path, selectedProject?.name]);
 
   useEffect(() => {
     if (!selectedProject) {
@@ -974,6 +1188,9 @@ export function useChatComposerState({
     isTextareaExpanded,
     thinkingMode,
     setThinkingMode,
+    skills,
+    selectedSkill,
+    handleSkillSelect,
     slashCommandsCount,
     filteredCommands,
     frequentCommands,
@@ -988,14 +1205,14 @@ export function useChatComposerState({
     selectedFileIndex,
     renderInputWithMentions,
     selectFile,
-    attachedImages,
-    setAttachedImages,
-    uploadingImages,
-    imageErrors,
+    attachedFiles,
+    setAttachedFiles,
+    uploadingFiles,
+    fileErrors,
     getRootProps,
     getInputProps,
     isDragActive,
-    openImagePicker: open,
+    openAttachmentPicker: open,
     handleSubmit,
     handleInputChange,
     handleKeyDown,

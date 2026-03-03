@@ -21,6 +21,8 @@
     "exitFullscreen": "Exit fullscreen",
     "fullscreen": "Fullscreen",
     "close": "Close",
+    "defaultMarkdownEditor": "Default",
+    "vditorMarkdownEditor": "Vditor",
     "previewMarkdown": "Preview markdown",
     "editMarkdown": "Edit markdown"
   },

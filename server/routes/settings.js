@@ -1,7 +1,21 @@
 import express from 'express';
 import { apiKeysDb, credentialsDb } from '../database/db.js';
+import { getServerSettings, getWorkspacesRoot, updateServerSettings } from '../config.js';
 
 const router = express.Router();
+
+function normalizeWorkspacesRootUpdate(workspacesRoot) {
+  if (workspacesRoot === null) {
+    return null;
+  }
+
+  if (typeof workspacesRoot === 'string') {
+    const trimmedRoot = workspacesRoot.trim();
+    return trimmedRoot || null;
+  }
+
+  throw new Error('workspacesRoot must be a string or null');
+}
 
 // ===============================
 // API Keys Management
@@ -80,6 +94,53 @@ router.patch('/api-keys/:keyId/toggle', async (req, res) => {
   } catch (error) {
     console.error('Error toggling API key:', error);
     res.status(500).json({ error: 'Failed to toggle API key' });
+  }
+});
+
+// ===============================
+// Server Settings (workspace root, etc.)
+// ===============================
+
+router.get('/config', async (req, res) => {
+  try {
+    const settings = getServerSettings();
+    res.json({
+      success: true,
+      config: {
+        ...settings,
+        resolvedWorkspacesRoot: getWorkspacesRoot(),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching server settings:', error);
+    res.status(500).json({ error: 'Failed to fetch server settings' });
+  }
+});
+
+router.post('/config', async (req, res) => {
+  try {
+    const { workspacesRoot } = req.body ?? {};
+    const updates = {};
+
+    if (workspacesRoot !== undefined) {
+      try {
+        updates.workspacesRoot = normalizeWorkspacesRootUpdate(workspacesRoot);
+      } catch {
+        return res.status(400).json({ error: 'workspacesRoot must be a string or null' });
+      }
+    }
+
+    const updatedSettings = updateServerSettings(updates);
+    res.json({
+      success: true,
+      config: {
+        ...updatedSettings,
+        resolvedWorkspacesRoot: getWorkspacesRoot(),
+      },
+    });
+  } catch (error) {
+    console.error('Error updating server settings:', error);
+    res.status(500).json({ error: 'Failed to update server settings' });
   }
 });
 

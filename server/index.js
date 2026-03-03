@@ -44,7 +44,7 @@ import pty from 'node-pty';
 import fetch from 'node-fetch';
 import mime from 'mime-types';
 
-import { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually, extractProjectDirectory, clearProjectDirectoryCache } from './projects.js';
+import { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually, extractProjectDirectory, initializeProjectUploadsDirectoryByPath, clearProjectDirectoryCache } from './projects.js';
 import { queryClaudeSDK, abortClaudeSDKSession, isClaudeSDKSessionActive, getActiveClaudeSDKSessions, resolveToolApproval } from './claude-sdk.js';
 import { spawnCursor, abortCursorSession, isCursorSessionActive, getActiveCursorSessions } from './cursor-cli.js';
 import { queryCodex, abortCodexSession, isCodexSessionActive, getActiveCodexSessions } from './openai-codex.js';
@@ -58,8 +58,9 @@ import taskmasterRoutes from './routes/taskmaster.js';
 import mcpUtilsRoutes from './routes/mcp-utils.js';
 import commandsRoutes from './routes/commands.js';
 import settingsRoutes from './routes/settings.js';
+import skillsRoutes from './routes/skills.js';
 import agentRoutes from './routes/agent.js';
-import projectsRoutes, { WORKSPACES_ROOT, validateWorkspacePath } from './routes/projects.js';
+import projectsRoutes, { parseWorkspaceRoots, resolvePathAllowingNonexistent, validateWorkspacePath } from './routes/projects.js';
 import cliAuthRoutes from './routes/cli-auth.js';
 import userRoutes from './routes/user.js';
 import codexRoutes from './routes/codex.js';
@@ -281,6 +282,18 @@ function shouldAutoOpenUrlFromOutput(value = '') {
     );
 }
 
+function normalizeComparablePath(inputPath) {
+    if (!inputPath || typeof inputPath !== 'string') {
+        return '';
+    }
+
+    const withoutLongPathPrefix = inputPath.startsWith('\\\\?\\')
+        ? inputPath.slice(4)
+        : inputPath;
+    const normalized = path.resolve(path.normalize(withoutLongPathPrefix.trim()));
+    return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
 // Single WebSocket server that handles both paths
 const wss = new WebSocketServer({
     server,
@@ -374,6 +387,9 @@ app.use('/api/commands', authenticateToken, commandsRoutes);
 
 // Settings API Routes (protected)
 app.use('/api/settings', authenticateToken, settingsRoutes);
+
+// Skills API Routes (protected)
+app.use('/api/skills', authenticateToken, skillsRoutes);
 
 // CLI Authentication API Routes (protected)
 app.use('/api/cli', authenticateToken, cliAuthRoutes);
@@ -571,6 +587,7 @@ app.post('/api/projects/create', authenticateToken, async (req, res) => {
         }
 
         const project = await addProjectManually(projectPath.trim());
+        await initializeProjectUploadsDirectoryByPath(project.path || projectPath.trim());
         res.json({ success: true, project });
     } catch (error) {
         console.error('Error creating project:', error);
@@ -579,12 +596,15 @@ app.post('/api/projects/create', authenticateToken, async (req, res) => {
 });
 
 const expandWorkspacePath = (inputPath) => {
+    const workspaceRoots = parseWorkspaceRoots();
+    const defaultRoot = workspaceRoots[0] || os.homedir();
+
     if (!inputPath) return inputPath;
     if (inputPath === '~') {
-        return WORKSPACES_ROOT;
+        return defaultRoot;
     }
     if (inputPath.startsWith('~/') || inputPath.startsWith('~\\')) {
-        return path.join(WORKSPACES_ROOT, inputPath.slice(2));
+        return path.join(defaultRoot, inputPath.slice(2));
     }
     return inputPath;
 };
@@ -593,11 +613,12 @@ const expandWorkspacePath = (inputPath) => {
 app.get('/api/browse-filesystem', authenticateToken, async (req, res) => {
     try {
         const { path: dirPath } = req.query;
+        const workspaceRoots = parseWorkspaceRoots();
+        const defaultRoot = workspaceRoots[0] || os.homedir();
 
         console.log('[API] Browse filesystem request for path:', dirPath);
-        console.log('[API] WORKSPACES_ROOT is:', WORKSPACES_ROOT);
+        console.log('[API] allowed workspaces roots are:', workspaceRoots.join(path.delimiter));
         // Default to home directory if no path provided
-        const defaultRoot = WORKSPACES_ROOT;
         let targetPath = dirPath ? expandWorkspacePath(dirPath) : defaultRoot;
 
         // Resolve and normalize the path
@@ -643,13 +664,20 @@ app.get('/api/browse-filesystem', authenticateToken, async (req, res) => {
 
         // Add common directories if browsing home directory
         const suggestions = [];
-        let resolvedWorkspaceRoot = defaultRoot;
-        try {
-            resolvedWorkspaceRoot = await fsPromises.realpath(defaultRoot);
-        } catch (error) {
-            // Use default root as-is if realpath fails
-        }
-        if (resolvedPath === resolvedWorkspaceRoot) {
+        const resolvedWorkspaceRoots = await Promise.all(
+            workspaceRoots.map(async (workspaceRoot) => {
+                try {
+                    return await resolvePathAllowingNonexistent(workspaceRoot);
+                } catch {
+                    return path.resolve(workspaceRoot);
+                }
+            }),
+        );
+        const normalizedResolvedPath = normalizeComparablePath(resolvedPath);
+        const isBrowsingWorkspaceRoot = resolvedWorkspaceRoots.some((workspaceRoot) => (
+            normalizeComparablePath(workspaceRoot) === normalizedResolvedPath
+        ));
+        if (isBrowsingWorkspaceRoot) {
             const commonDirs = ['Desktop', 'Documents', 'Projects', 'Development', 'Dev', 'Code', 'workspace'];
             const existingCommon = directories.filter(dir => commonDirs.includes(dir.name));
             const otherDirs = directories.filter(dir => !commonDirs.includes(dir.name));

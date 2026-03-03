@@ -38,6 +38,7 @@
     "viewEnvironments": "View Environments",
     "hideSidebar": "Hide sidebar",
     "createProject": "Create new project",
+    "initializeUploads": "Initialize uploads directory for selected project",
     "refresh": "Refresh projects and sessions (Ctrl+R)",
     "renameProject": "Rename project (F2)",
     "deleteProject": "Delete empty project (Delete)",

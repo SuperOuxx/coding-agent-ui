@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { unifiedMergeView } from '@codemirror/merge';
 import type { Extension } from '@codemirror/state';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCodeEditorDocument } from '../hooks/useCodeEditorDocument';
 import { useCodeEditorSettings } from '../hooks/useCodeEditorSettings';
@@ -14,6 +14,14 @@ import CodeEditorFooter from './subcomponents/CodeEditorFooter';
 import CodeEditorHeader from './subcomponents/CodeEditorHeader';
 import CodeEditorLoadingState from './subcomponents/CodeEditorLoadingState';
 import CodeEditorSurface from './subcomponents/CodeEditorSurface';
+import MarkdownFileEditor from './subcomponents/markdown/MarkdownFileEditor';
+
+type MarkdownEditorMode = 'default' | 'vditor';
+
+const isMarkdownFileByName = (fileName: string) => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  return extension === 'md' || extension === 'markdown';
+};
 
 type CodeEditorProps = {
   file: CodeEditorFile;
@@ -23,6 +31,8 @@ type CodeEditorProps = {
   isExpanded?: boolean;
   onToggleExpand?: (() => void) | null;
   onPopOut?: (() => void) | null;
+  onDirtyStateChange?: ((isDirty: boolean) => void) | null;
+  onRegisterSaveHandler?: ((handler: (() => Promise<boolean>) | null) => void) | null;
 };
 
 export default function CodeEditor({
@@ -33,11 +43,16 @@ export default function CodeEditor({
   isExpanded = false,
   onToggleExpand = null,
   onPopOut = null,
+  onDirtyStateChange = null,
+  onRegisterSaveHandler = null,
 }: CodeEditorProps) {
   const { t } = useTranslation('codeEditor');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showDiff, setShowDiff] = useState(Boolean(file.diffInfo));
   const [markdownPreview, setMarkdownPreview] = useState(false);
+  const [markdownEditorMode, setMarkdownEditorMode] = useState<MarkdownEditorMode>(
+    isMarkdownFileByName(file.name) ? 'vditor' : 'default',
+  );
 
   const {
     isDarkMode,
@@ -54,6 +69,7 @@ export default function CodeEditor({
     saving,
     saveSuccess,
     saveError,
+    isDirty,
     handleSave,
     handleDownload,
   } = useCodeEditorDocument({
@@ -61,10 +77,30 @@ export default function CodeEditor({
     projectPath,
   });
 
-  const isMarkdownFile = useMemo(() => {
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    return extension === 'md' || extension === 'markdown';
-  }, [file.name]);
+  const isMarkdownFile = useMemo(() => isMarkdownFileByName(file.name), [file.name]);
+
+  const isUsingVditor = isMarkdownFile && markdownEditorMode === 'vditor';
+
+  useEffect(() => {
+    setShowDiff(Boolean(file.diffInfo));
+    setMarkdownPreview(false);
+    setMarkdownEditorMode(isMarkdownFileByName(file.name) ? 'vditor' : 'default');
+  }, [file.diffInfo, file.path]);
+
+  useEffect(() => {
+    onDirtyStateChange?.(isDirty);
+  }, [isDirty, onDirtyStateChange]);
+
+  useEffect(() => {
+    if (!onRegisterSaveHandler) {
+      return;
+    }
+
+    onRegisterSaveHandler(() => handleSave());
+    return () => {
+      onRegisterSaveHandler(null);
+    };
+  }, [handleSave, onRegisterSaveHandler]);
 
   const minimapExtension = useMemo(
     () => (
@@ -143,7 +179,9 @@ export default function CodeEditor({
   ]);
 
   useEditorKeyboardShortcuts({
-    onSave: handleSave,
+    onSave: () => {
+      void handleSave();
+    },
     onClose,
     dependency: content,
   });
@@ -162,11 +200,13 @@ export default function CodeEditor({
     ? 'w-full h-full flex flex-col'
     : `fixed inset-0 z-[9999] md:bg-black/50 md:flex md:items-center md:justify-center md:p-4 ${isFullscreen ? 'md:p-0' : ''}`;
 
+  const fullscreenSizeClassName = isFullscreen
+    ? 'md:w-full md:h-full md:rounded-none'
+    : 'md:w-full md:max-w-6xl md:h-[80vh] md:max-h-[80vh]';
+
   const innerContainerClassName = isSidebar
     ? 'bg-background flex flex-col w-full h-full'
-    : `bg-background shadow-2xl flex flex-col w-full h-full md:rounded-lg md:shadow-2xl${
-      isFullscreen ? ' md:w-full md:h-full md:rounded-none' : ' md:w-full md:max-w-6xl md:h-[80vh] md:max-h-[80vh]'
-    }`;
+    : `bg-background shadow-2xl flex flex-col w-full h-full md:rounded-lg md:shadow-2xl ${fullscreenSizeClassName}`;
 
   return (
     <>
@@ -179,18 +219,24 @@ export default function CodeEditor({
             isFullscreen={isFullscreen}
             isMarkdownFile={isMarkdownFile}
             markdownPreview={markdownPreview}
+            markdownEditorMode={markdownEditorMode}
             saving={saving}
             saveSuccess={saveSuccess}
             onToggleMarkdownPreview={() => setMarkdownPreview((previous) => !previous)}
+            onSwitchMarkdownEditorMode={(mode) => setMarkdownEditorMode(mode)}
             onOpenSettings={() => window.openSettings?.('appearance')}
             onDownload={handleDownload}
-            onSave={handleSave}
+            onSave={() => {
+              void handleSave();
+            }}
             onToggleFullscreen={() => setIsFullscreen((previous) => !previous)}
             onClose={onClose}
             labels={{
               showingChanges: t('header.showingChanges'),
               editMarkdown: t('actions.editMarkdown'),
               previewMarkdown: t('actions.previewMarkdown'),
+              defaultMarkdownEditor: t('actions.defaultMarkdownEditor', { defaultValue: 'Default' }),
+              vditorMarkdownEditor: t('actions.vditorMarkdownEditor', { defaultValue: 'Vditor' }),
               settings: t('toolbar.settings'),
               download: t('actions.download'),
               save: t('actions.save'),
@@ -209,16 +255,20 @@ export default function CodeEditor({
           )}
 
           <div className="flex-1 overflow-hidden">
-            <CodeEditorSurface
-              content={content}
-              onChange={setContent}
-              markdownPreview={markdownPreview}
-              isMarkdownFile={isMarkdownFile}
-              isDarkMode={isDarkMode}
-              fontSize={fontSize}
-              showLineNumbers={showLineNumbers}
-              extensions={extensions}
-            />
+            {isUsingVditor ? (
+              <MarkdownFileEditor content={content} onChange={setContent} />
+            ) : (
+              <CodeEditorSurface
+                content={content}
+                onChange={setContent}
+                markdownPreview={markdownPreview}
+                isMarkdownFile={isMarkdownFile}
+                isDarkMode={isDarkMode}
+                fontSize={fontSize}
+                showLineNumbers={showLineNumbers}
+                extensions={extensions}
+              />
+            )}
           </div>
 
           <CodeEditorFooter

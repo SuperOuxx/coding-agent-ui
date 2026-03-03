@@ -130,6 +130,9 @@ function ChatInterface({
     isTextareaExpanded,
     thinkingMode,
     setThinkingMode,
+    skills,
+    selectedSkill,
+    handleSkillSelect,
     slashCommandsCount,
     filteredCommands,
     frequentCommands,
@@ -144,14 +147,14 @@ function ChatInterface({
     selectedFileIndex,
     renderInputWithMentions,
     selectFile,
-    attachedImages,
-    setAttachedImages,
-    uploadingImages,
-    imageErrors,
+    attachedFiles,
+    setAttachedFiles,
+    uploadingFiles,
+    fileErrors,
     getRootProps,
     getInputProps,
     isDragActive,
-    openImagePicker,
+    openAttachmentPicker,
     handleSubmit,
     handleInputChange,
     handleKeyDown,
@@ -248,22 +251,37 @@ function ChatInterface({
     };
   }, [resetStreamingState]);
 
-  if (!selectedProject) {
-    const selectedProviderLabel =
-      provider === 'cursor'
-        ? t('messageTypes.cursor')
-        : provider === 'codex'
-          ? t('messageTypes.codex')
-          : provider === 'gemini'
-            ? t('messageTypes.gemini')
-            : t('messageTypes.claude');
+  const getProviderLabel = useCallback(
+    (providerType: Provider | string) => {
+      switch (providerType) {
+        case 'cursor':
+          return t('messageTypes.cursor');
+        case 'codex':
+          return t('messageTypes.codex');
+        case 'gemini':
+          return t('messageTypes.gemini');
+        default:
+          return t('messageTypes.claude');
+      }
+    },
+    [t],
+  );
 
+  const providerLabel = getProviderLabel(provider);
+
+  const handleRemoveAttachedFile = useCallback((indexToRemove: number) => {
+    setAttachedFiles((previousFiles) =>
+      previousFiles.filter((_, currentIndex) => currentIndex !== indexToRemove),
+    );
+  }, [setAttachedFiles]);
+
+  if (!selectedProject) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center text-muted-foreground">
           <p className="text-sm">
             {t('projectSelection.startChatWithProvider', {
-              provider: selectedProviderLabel,
+              provider: providerLabel,
               defaultValue: 'Select a project to start chatting with {{provider}}',
             })}
           </p>
@@ -333,6 +351,9 @@ function ChatInterface({
           onModeSwitch={cyclePermissionMode}
           thinkingMode={thinkingMode}
           setThinkingMode={setThinkingMode}
+          skills={skills}
+          selectedSkill={selectedSkill}
+          onSkillSelect={handleSkillSelect}
           tokenBudget={tokenBudget}
           slashCommandsCount={slashCommandsCount}
           onToggleCommandMenu={handleToggleCommandMenu}
@@ -343,14 +364,10 @@ function ChatInterface({
           onScrollToBottom={scrollToBottomAndReset}
           onSubmit={handleSubmit}
           isDragActive={isDragActive}
-          attachedImages={attachedImages}
-          onRemoveImage={(index) =>
-            setAttachedImages((previous) =>
-              previous.filter((_, currentIndex) => currentIndex !== index),
-            )
-          }
-          uploadingImages={uploadingImages}
-          imageErrors={imageErrors}
+          attachedFiles={attachedFiles}
+          onRemoveFile={handleRemoveAttachedFile}
+          uploadingFiles={uploadingFiles}
+          fileErrors={fileErrors}
           showFileDropdown={showFileDropdown}
           filteredFiles={filteredFiles}
           selectedFileIndex={selectedFileIndex}
@@ -363,7 +380,7 @@ function ChatInterface({
           frequentCommands={commandQuery ? [] : frequentCommands}
           getRootProps={getRootProps as (...args: unknown[]) => Record<string, unknown>}
           getInputProps={getInputProps as (...args: unknown[]) => Record<string, unknown>}
-          openImagePicker={openImagePicker}
+          openAttachmentPicker={openAttachmentPicker}
           inputHighlightRef={inputHighlightRef}
           renderInputWithMentions={renderInputWithMentions}
           textareaRef={textareaRef}
@@ -377,14 +394,7 @@ function ChatInterface({
           onInputFocusChange={handleInputFocusChange}
           isInputFocused={isInputFocused}
           placeholder={t('input.placeholder', {
-            provider:
-              provider === 'cursor'
-                ? t('messageTypes.cursor')
-                : provider === 'codex'
-                  ? t('messageTypes.codex')
-                  : provider === 'gemini'
-                    ? t('messageTypes.gemini')
-                    : t('messageTypes.claude'),
+            provider: providerLabel,
           })}
           isTextareaExpanded={isTextareaExpanded}
           sendByCtrlEnter={sendByCtrlEnter}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDeviceSettings } from '../../../hooks/useDeviceSettings';
 import { useVersionCheck } from '../../../hooks/useVersionCheck';
@@ -12,6 +12,7 @@ import SidebarModals from './subcomponents/SidebarModals';
 import type { Project } from '../../../types/app';
 import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
 import type { MCPServerStatus, SidebarProps } from '../types/types';
+import { api } from '../../../utils/api';
 
 type TaskMasterSidebarContext = {
   setCurrentProject: (project: Project) => void;
@@ -46,6 +47,7 @@ function Sidebar({
   const { sidebarVisible } = preferences;
   const { setCurrentProject, mcpServerStatus } = useTaskMaster() as TaskMasterSidebarContext;
   const { tasksEnabled } = useTasksSettings();
+  const [isInitializingUploads, setIsInitializingUploads] = useState(false);
 
   const {
     isSidebarCollapsed,
@@ -126,6 +128,38 @@ function Sidebar({
 
     window.location.reload();
   };
+
+  const handleInitializeUploads = useCallback(async () => {
+    if (!selectedProject || isInitializingUploads) {
+      return;
+    }
+
+    setIsInitializingUploads(true);
+    try {
+      const response = await api.initializeUploads(selectedProject.name);
+      if (!response.ok) {
+        throw new Error('Failed to initialize uploads directory');
+      }
+
+      await refreshProjects();
+    } catch (error) {
+      console.error('Failed to initialize uploads directory:', error);
+    } finally {
+      setIsInitializingUploads(false);
+    }
+  }, [isInitializingUploads, refreshProjects, selectedProject]);
+
+  const handleRefreshProjects = useCallback(() => {
+    void refreshProjects();
+  }, [refreshProjects]);
+
+  const handleOpenVersionModal = useCallback(() => {
+    setShowVersionModal(true);
+  }, [setShowVersionModal]);
+
+  const handleOpenCreateProjectModal = useCallback(() => {
+    setShowNewProject(true);
+  }, [setShowNewProject]);
 
   const projectListProps: SidebarProjectListProps = {
     projects,
@@ -209,7 +243,7 @@ function Sidebar({
           onExpand={handleExpandSidebar}
           onShowSettings={onShowSettings}
           updateAvailable={updateAvailable}
-          onShowVersionModal={() => setShowVersionModal(true)}
+          onShowVersionModal={handleOpenVersionModal}
           t={t}
         />
       ) : (
@@ -222,16 +256,19 @@ function Sidebar({
             searchFilter={searchFilter}
             onSearchFilterChange={setSearchFilter}
             onClearSearchFilter={() => setSearchFilter('')}
-            onRefresh={() => {
-              void refreshProjects();
-            }}
+            onRefresh={handleRefreshProjects}
             isRefreshing={isRefreshing}
-            onCreateProject={() => setShowNewProject(true)}
+            onInitializeUploads={() => {
+              void handleInitializeUploads();
+            }}
+            canInitializeUploads={Boolean(selectedProject)}
+            isInitializingUploads={isInitializingUploads}
+            onCreateProject={handleOpenCreateProjectModal}
             onCollapseSidebar={handleCollapseSidebar}
             updateAvailable={updateAvailable}
             releaseInfo={releaseInfo}
             latestVersion={latestVersion}
-            onShowVersionModal={() => setShowVersionModal(true)}
+            onShowVersionModal={handleOpenVersionModal}
             onShowSettings={onShowSettings}
             projectListProps={projectListProps}
             t={t}

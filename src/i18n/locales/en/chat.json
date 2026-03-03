@@ -122,6 +122,7 @@
     "disabled": "Input disabled",
     "attachFiles": "Attach files",
     "attachImages": "Attach images",
+    "dropFilesHere": "Drop files here",
     "send": "Send",
     "stop": "Stop",
     "hintText": {

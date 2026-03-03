@@ -5,6 +5,7 @@ export type CodeEditorDiffInfo = {
 };
 
 export type CodeEditorFile = {
+  id?: string;
   name: string;
   path: string;
   projectName?: string;

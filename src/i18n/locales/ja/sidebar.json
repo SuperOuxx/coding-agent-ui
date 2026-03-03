@@ -38,6 +38,7 @@
     "viewEnvironments": "環境を表示",
     "hideSidebar": "サイドバーを隠す",
     "createProject": "新しいプロジェクトを作成",
+    "initializeUploads": "選択中プロジェクトのアップロードフォルダを初期化",
     "refresh": "プロジェクトとセッションを更新 (Ctrl+R)",
     "renameProject": "プロジェクト名を変更 (F2)",
     "deleteProject": "空のプロジェクトを削除 (Delete)",

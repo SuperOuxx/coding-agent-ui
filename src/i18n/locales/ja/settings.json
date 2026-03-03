@@ -84,6 +84,7 @@
     }
   },
   "mainTabs": {
+    "workspace": "Workspace",
     "agents": "エージェント",
     "appearance": "外観",
     "git": "Git",
@@ -413,6 +414,23 @@
     "help": {
       "title": "Codex MCPについて",
       "description": "Codexはstdioベースのツールサーバーをサポートしています。追加のツールやリソースでCodexの機能を拡張するサーバーを追加できます。"
+    }
+  },
+  "workspaceSettings": {
+    "title": "Workspace Root",
+    "description": "Configure the allowed workspace root directory used by project creation and import validation.",
+    "inputLabel": "Workspace Root Path",
+    "inputHelp": "Supports multiple roots separated by the system delimiter (; on Windows, : on Unix).",
+    "rootPlaceholder": "e.g. ~/Projects or D:\\Projects",
+    "resolvedLabel": "Current Effective Workspace Root",
+    "resolvedHelp": "Resolved root after applying saved settings, environment fallback, and defaults.",
+    "actions": {
+      "save": "Save Settings",
+      "saving": "Saving..."
+    },
+    "status": {
+      "success": "Workspace root saved.",
+      "error": "Failed to save workspace root: {{message}}"
     }
   }
 }

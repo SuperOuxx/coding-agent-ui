@@ -215,6 +215,81 @@ async function loadProjectConfig() {
   }
 }
 
+const DEFAULT_UPLOADS_DIRECTORY = 'upload_files';
+
+async function getProjectUploadsDirectoryByPath(projectPath) {
+  const normalizedTargetPath = normalizeComparablePath(projectPath);
+  if (!normalizedTargetPath) {
+    return DEFAULT_UPLOADS_DIRECTORY;
+  }
+
+  const config = await loadProjectConfig();
+  for (const value of Object.values(config)) {
+    const configuredPath = value?.originalPath || value?.path;
+    if (normalizeComparablePath(configuredPath) === normalizedTargetPath) {
+      const uploadsDirectory = typeof value?.uploadsDirectory === 'string'
+        ? value.uploadsDirectory.trim()
+        : '';
+      return uploadsDirectory || DEFAULT_UPLOADS_DIRECTORY;
+    }
+  }
+
+  return DEFAULT_UPLOADS_DIRECTORY;
+}
+
+async function initializeProjectUploadsDirectoryByPath(projectPath) {
+  const normalizedTargetPath = normalizeComparablePath(projectPath);
+  if (!normalizedTargetPath) {
+    throw new Error(`Invalid project path: ${projectPath}`);
+  }
+
+  const config = await loadProjectConfig();
+  let matchedKey = null;
+  let uploadsDirectory = DEFAULT_UPLOADS_DIRECTORY;
+
+  for (const [key, value] of Object.entries(config)) {
+    const configuredPath = value?.originalPath || value?.path;
+    if (normalizeComparablePath(configuredPath) === normalizedTargetPath) {
+      matchedKey = key;
+      const configuredUploadsDirectory = typeof value?.uploadsDirectory === 'string'
+        ? value.uploadsDirectory.trim()
+        : '';
+      uploadsDirectory = configuredUploadsDirectory || DEFAULT_UPLOADS_DIRECTORY;
+      break;
+    }
+  }
+
+  const uploadsPath = path.join(projectPath, uploadsDirectory);
+  let created = false;
+  try {
+    const stats = await fs.stat(uploadsPath);
+    if (!stats.isDirectory()) {
+      throw new Error(`Upload path exists but is not a directory: ${uploadsPath}`);
+    }
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      await fs.mkdir(uploadsPath, { recursive: true });
+      created = true;
+    } else {
+      throw error;
+    }
+  }
+
+  if (matchedKey) {
+    config[matchedKey] = {
+      ...config[matchedKey],
+      uploadsDirectory,
+    };
+    await saveProjectConfig(config);
+  }
+
+  return {
+    uploadsDirectory,
+    uploadsPath,
+    created,
+  };
+}
+
 // Save project configuration file
 async function saveProjectConfig(config) {
   const claudeDir = path.join(os.homedir(), '.claude');
@@ -1836,6 +1911,8 @@ export {
   loadProjectConfig,
   saveProjectConfig,
   extractProjectDirectory,
+  getProjectUploadsDirectoryByPath,
+  initializeProjectUploadsDirectoryByPath,
   clearProjectDirectoryCache,
   getCodexSessions,
   getCodexSessionMessages,

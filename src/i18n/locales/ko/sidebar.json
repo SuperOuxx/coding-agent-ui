@@ -38,6 +38,7 @@
     "viewEnvironments": "환경 보기",
     "hideSidebar": "사이드바 숨기기",
     "createProject": "새 프로젝트 생성",
+    "initializeUploads": "선택한 프로젝트 업로드 폴더 초기화",
     "refresh": "프로젝트 및 세션 새로고침 (Ctrl+R)",
     "renameProject": "프로젝트 이름 변경 (F2)",
     "deleteProject": "빈 프로젝트 삭제 (Delete)",

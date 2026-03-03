@@ -24,6 +24,14 @@ interface UseFileMentionsOptions {
   textareaRef: RefObject<HTMLTextAreaElement>;
 }
 
+const normalizeMentionPath = (rawPath: string) => {
+  const trimmedPath = rawPath.trim();
+  if (!trimmedPath) {
+    return '';
+  }
+  return trimmedPath.startsWith('@') ? trimmedPath : `@${trimmedPath}`;
+};
+
 const flattenFileTree = (files: ProjectFileNode[], basePath = ''): MentionableFile[] => {
   let flattened: MentionableFile[] = [];
 
@@ -46,6 +54,17 @@ const flattenFileTree = (files: ProjectFileNode[], basePath = ''): MentionableFi
   return flattened;
 };
 
+const getMatchingFiles = (fileList: MentionableFile[], query: string): MentionableFile[] => {
+  const normalizedQuery = query.toLowerCase();
+  return fileList
+    .filter(
+      (file) =>
+        file.name.toLowerCase().includes(normalizedQuery) ||
+        file.path.toLowerCase().includes(normalizedQuery),
+    )
+    .slice(0, 10);
+};
+
 export function useFileMentions({ selectedProject, input, setInput, textareaRef }: UseFileMentionsOptions) {
   const [fileList, setFileList] = useState<MentionableFile[]>([]);
   const [fileMentions, setFileMentions] = useState<string[]>([]);
@@ -65,7 +84,6 @@ export function useFileMentions({ selectedProject, input, setInput, textareaRef 
       if (!projectName) {
         return;
       }
-
 
       try {
         const response = await api.getFiles(projectName, { signal: abortController.signal });
@@ -110,16 +128,7 @@ export function useFileMentions({ selectedProject, input, setInput, textareaRef 
     setAtSymbolPosition(lastAtIndex);
     setShowFileDropdown(true);
     setSelectedFileIndex(-1);
-
-    const matchingFiles = fileList
-      .filter(
-        (file) =>
-          file.name.toLowerCase().includes(textAfterAt.toLowerCase()) ||
-          file.path.toLowerCase().includes(textAfterAt.toLowerCase()),
-      )
-      .slice(0, 10);
-
-    setFilteredFiles(matchingFiles);
+    setFilteredFiles(getMatchingFiles(fileList, textAfterAt));
   }, [input, cursorPosition, fileList]);
 
   const activeFileMentions = useMemo(() => {
@@ -179,9 +188,10 @@ export function useFileMentions({ selectedProject, input, setInput, textareaRef 
       const textAfterAtQuery = input.slice(atSymbolPosition);
       const spaceIndex = textAfterAtQuery.indexOf(' ');
       const textAfterQuery = spaceIndex !== -1 ? textAfterAtQuery.slice(spaceIndex) : '';
+      const mentionPath = normalizeMentionPath(file.path);
 
-      const newInput = `${textBeforeAt}${file.path} ${textAfterQuery}`;
-      const newCursorPosition = textBeforeAt.length + file.path.length + 1;
+      const newInput = `${textBeforeAt}${mentionPath} ${textAfterQuery}`;
+      const newCursorPosition = textBeforeAt.length + mentionPath.length + 1;
 
       if (textareaRef.current && !textareaRef.current.matches(':focus')) {
         textareaRef.current.focus();
@@ -190,7 +200,7 @@ export function useFileMentions({ selectedProject, input, setInput, textareaRef 
       setInput(newInput);
       setCursorPosition(newCursorPosition);
       setFileMentions((previousMentions) =>
-        previousMentions.includes(file.path) ? previousMentions : [...previousMentions, file.path],
+        previousMentions.includes(mentionPath) ? previousMentions : [...previousMentions, mentionPath],
       );
 
       setShowFileDropdown(false);
@@ -212,6 +222,26 @@ export function useFileMentions({ selectedProject, input, setInput, textareaRef 
     },
     [input, atSymbolPosition, textareaRef, setInput],
   );
+
+  const registerFileMentions = useCallback((mentions: string[]) => {
+    if (!Array.isArray(mentions) || mentions.length === 0) {
+      return;
+    }
+
+    const normalizedMentions = mentions
+      .map(normalizeMentionPath)
+      .filter(Boolean);
+
+    if (normalizedMentions.length === 0) {
+      return;
+    }
+
+    setFileMentions((previousMentions) => {
+      const mergedMentions = new Set(previousMentions);
+      normalizedMentions.forEach((mention) => mergedMentions.add(mention));
+      return Array.from(mergedMentions);
+    });
+  }, []);
 
   const handleFileMentionsKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>): boolean => {
@@ -262,6 +292,7 @@ export function useFileMentions({ selectedProject, input, setInput, textareaRef 
     selectedFileIndex,
     renderInputWithMentions,
     selectFile,
+    registerFileMentions,
     setCursorPosition,
     handleFileMentionsKeyDown,
   };

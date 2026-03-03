@@ -20,7 +20,11 @@
     "saved": "저장됨!",
     "exitFullscreen": "전체화면 종료",
     "fullscreen": "전체화면",
-    "close": "닫기"
+    "close": "닫기",
+    "defaultMarkdownEditor": "기본",
+    "vditorMarkdownEditor": "Vditor",
+    "previewMarkdown": "Markdown 미리보기",
+    "editMarkdown": "Markdown 편집"
   },
   "footer": {
     "lines": "줄:",

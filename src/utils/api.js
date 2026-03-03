@@ -108,6 +108,19 @@ export const api = {
     }),
   getFiles: (projectName, options = {}) =>
     authenticatedFetch(`/api/projects/${projectName}/files`, options),
+  uploadFile: (projectName, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}/files/upload`, {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
+  },
+  initializeUploads: (projectName) =>
+    authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}/files/init`, {
+      method: 'POST',
+    }),
   transcribe: (formData) =>
     authenticatedFetch('/api/transcribe', {
       method: 'POST',

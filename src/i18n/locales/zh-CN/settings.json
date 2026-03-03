@@ -84,6 +84,7 @@
     }
   },
   "mainTabs": {
+    "workspace": "Workspace",
     "agents": "智能体",
     "appearance": "外观",
     "git": "Git",
@@ -413,6 +414,23 @@
     "help": {
       "title": "关于 Codex MCP",
       "description": "Codex 支持基于 stdio 的 MCP 服务器。您可以添加服务器，通过额外的工具和资源来扩展 Codex 的功能。"
+    }
+  },
+  "workspaceSettings": {
+    "title": "Workspace Root",
+    "description": "Configure the allowed workspace root directory used by project creation and import validation.",
+    "inputLabel": "Workspace Root Path",
+    "inputHelp": "Supports multiple roots separated by the system delimiter (; on Windows, : on Unix).",
+    "rootPlaceholder": "e.g. ~/Projects or D:\\Projects",
+    "resolvedLabel": "Current Effective Workspace Root",
+    "resolvedHelp": "Resolved root after applying saved settings, environment fallback, and defaults.",
+    "actions": {
+      "save": "Save Settings",
+      "saving": "Saving..."
+    },
+    "status": {
+      "success": "Workspace root saved.",
+      "error": "Failed to save workspace root: {{message}}"
     }
   }
 }
