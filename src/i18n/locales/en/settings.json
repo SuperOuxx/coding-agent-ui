@@ -84,6 +84,7 @@
     }
   },
   "mainTabs": {
+    "label": "Settings",
     "workspace": "Workspace",
     "agents": "Agents",
     "appearance": "Appearance",
