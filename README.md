@@ -86,37 +86,37 @@ npm install -g @siteboon/claude-code-ui
 Then start with a simple command:
 
 ```bash
-claude-code-ui
+ccui
 ```
 
 
-**To restart**: Stop with Ctrl+C and run `claude-code-ui` again.
+**To restart**: Stop with Ctrl+C and run `ccui` again.
 
 **To update**:
 ```bash
-cloudcli update
+ccui update
 ```
 
 ### CLI Usage
 
-After global installation, you have access to both `claude-code-ui` and `cloudcli` commands:
+After global installation, you have access to `ccui` (recommended) and legacy aliases `claude-code-ui` / `cloudcli`:
 
 | Command / Option | Short | Description |
 |------------------|-------|-------------|
-| `cloudcli` or `claude-code-ui` | | Start the server (default) |
-| `cloudcli start` | | Start the server explicitly |
-| `cloudcli status` | | Show configuration and data locations |
-| `cloudcli update` | | Update to the latest version |
-| `cloudcli help` | | Show help information |
-| `cloudcli version` | | Show version information |
+| `ccui` | | Start the server (default) |
+| `ccui start` | | Start the server explicitly |
+| `ccui status` | | Show configuration and data locations |
+| `ccui update` | | Update to the latest version |
+| `ccui help` | | Show help information |
+| `ccui version` | | Show version information |
 | `--port <port>` | `-p` | Set server port (default: 3001) |
 | `--database-path <path>` | | Set custom database location |
 
 **Examples:**
 ```bash
-cloudcli                          # Start with defaults
-cloudcli -p 8080              # Start on custom port
-cloudcli status                   # Show current configuration
+ccui                              # Start with defaults
+ccui -p 8080                      # Start on custom port
+ccui status                       # Show current configuration
 ```
 
 ### Run as Background Service (Recommended for Production)
@@ -133,13 +133,13 @@ npm install -g pm2
 
 ```bash
 # Start the server in background
-pm2 start claude-code-ui --name "claude-code-ui"
+pm2 start ccui --name "ccui"
 
-# Or using the shorter alias
-pm2 start cloudcli --name "claude-code-ui"
+# Or using legacy alias
+pm2 start cloudcli --name "ccui"
 
 # Start on a custom port
-pm2 start cloudcli --name "claude-code-ui" -- --port 8080
+pm2 start ccui --name "ccui" -- --port 8080
 ```
 
 

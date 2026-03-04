@@ -131,9 +131,9 @@ function showStatus() {
 
     console.log('\n' + c.dim('═'.repeat(60)));
     console.log(`\n${c.tip('[TIP]')} Hints:`);
-    console.log(`      ${c.dim('>')} Use ${c.bright('cloudcli --port 8080')} to run on a custom port`);
-    console.log(`      ${c.dim('>')} Use ${c.bright('cloudcli --database-path /path/to/db')} for custom database`);
-    console.log(`      ${c.dim('>')} Run ${c.bright('cloudcli help')} for all options`);
+    console.log(`      ${c.dim('>')} Use ${c.bright('ccui --port 8080')} to run on a custom port`);
+    console.log(`      ${c.dim('>')} Use ${c.bright('ccui --database-path /path/to/db')} for custom database`);
+    console.log(`      ${c.dim('>')} Run ${c.bright('ccui help')} for all options`);
     console.log(`      ${c.dim('>')} Access the UI at http://localhost:${process.env.PORT || '3001'}\n`);
 }
 
@@ -145,6 +145,7 @@ function showHelp() {
 ╚═══════════════════════════════════════════════════════════════╝
 
 Usage:
+  ccui [command] [options]
   claude-code-ui [command] [options]
   cloudcli [command] [options]
 
@@ -162,11 +163,11 @@ Options:
   -v, --version               Show version information
 
 Examples:
-  $ cloudcli                        # Start with defaults
-  $ cloudcli --port 8080            # Start on port 8080
-  $ cloudcli -p 3000                # Short form for port
-  $ cloudcli start --port 4000      # Explicit start command
-  $ cloudcli status                 # Show configuration
+  $ ccui                            # Start with defaults
+  $ ccui --port 8080                # Start on port 8080
+  $ ccui -p 3000                    # Short form for port
+  $ ccui start --port 4000          # Explicit start command
+  $ ccui status                     # Show configuration
 
 Environment Variables:
   PORT                Set server port (default: 3001)
@@ -207,7 +208,7 @@ async function checkForUpdates(silent = false) {
 
         if (isNewerVersion(latestVersion, currentVersion)) {
             console.log(`\n${c.warn('[UPDATE]')} New version available: ${c.bright(latestVersion)} (current: ${currentVersion})`);
-            console.log(`         Run ${c.bright('cloudcli update')} to update\n`);
+            console.log(`         Run ${c.bright('ccui update')} to update\n`);
             return { hasUpdate: true, latestVersion, currentVersion };
         } else if (!silent) {
             console.log(`${c.ok('[OK]')} You are on the latest version (${currentVersion})`);
@@ -236,7 +237,7 @@ async function updatePackage() {
 
         console.log(`${c.info('[INFO]')} Updating from ${currentVersion} to ${latestVersion}...`);
         execSync('npm update -g @siteboon/claude-code-ui', { stdio: 'inherit' });
-        console.log(`${c.ok('[OK]')} Update complete! Restart cloudcli to use the new version.`);
+        console.log(`${c.ok('[OK]')} Update complete! Restart ccui to use the new version.`);
     } catch (e) {
         console.error(`${c.error('[ERROR]')} Update failed: ${e.message}`);
         console.log(`${c.tip('[TIP]')} Try running manually: npm update -g @siteboon/claude-code-ui`);
@@ -315,7 +316,7 @@ async function main() {
             break;
         default:
             console.error(`\n❌ Unknown command: ${command}`);
-            console.log('   Run "cloudcli help" for usage information.\n');
+            console.log('   Run "ccui help" for usage information.\n');
             process.exit(1);
     }
 }

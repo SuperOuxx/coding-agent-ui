@@ -5,6 +5,7 @@
   "type": "module",
   "main": "server/index.js",
   "bin": {
+    "ccui": "server/cli.js",
     "claude-code-ui": "server/cli.js",
     "cloudcli": "server/cli.js"
   },
