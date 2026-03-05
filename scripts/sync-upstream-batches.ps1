@@ -1,5 +1,5 @@
 param(
-  [ValidateSet("1", "2", "3", "all")]
+  [ValidateSet("1", "2", "3", "4", "all")]
   [string]$Batch = "all",
   [string]$UpstreamRemote = "upstream",
   [string]$UpstreamBranch = "main",
@@ -232,6 +232,10 @@ $batch3Commits = @(
   "0590c5c178f4791e2b039d525ecca4d220c3dcae"
 )
 
+$batch4Commits = @(
+  "2444209723701dda2b881cea2501b239e64e51c1"
+)
+
 Write-Section "Pre-flight checks"
 Ensure-CleanWorkingTree
 Invoke-Git rev-parse --is-inside-work-tree | Out-Null
@@ -290,6 +294,22 @@ if ($Batch -eq "3" -or $Batch -eq "all") {
     "File tree operations and binary file handling are correct.",
     "Chat terminal lifecycle completes without stuck processing/thinking UI.",
     "Local custom behavior in chat composer/server integration is not regressed."
+  )
+}
+
+if ($Batch -eq "4" -or $Batch -eq "all") {
+  Write-Section "Batch 4"
+  Ensure-BranchExists -BranchName "sync/upstream-batch3"
+  Invoke-Git switch "sync/upstream-batch3" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Failed to switch to sync/upstream-batch3" }
+  Invoke-Git switch -c "sync/upstream-batch4" | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Failed to create branch sync/upstream-batch4" }
+  foreach ($c in $batch4Commits) { CherryPick-Commit -Commit $c }
+  Run-BatchChecks -BatchName "4" -AcceptancePoints @(
+    "Shell CLI prompt options are detected and rendered as clickable overlay buttons.",
+    "Clicking an option sends the correct numeric input to terminal and closes overlay.",
+    "Esc button sends escape key to terminal and closes overlay.",
+    "Prompt overlay is cleared on websocket disconnect/reconnect."
   )
 }
 
