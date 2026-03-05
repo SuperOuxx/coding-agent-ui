@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { MouseEvent, MutableRefObject } from 'react';
 import { X } from 'lucide-react';
 import type { CodeEditorFile } from '../types/types';
@@ -24,6 +24,11 @@ type EditorSidebarProps = {
   projectPath?: string;
   fillSpace?: boolean;
 };
+
+// Minimum width for the left content (file tree, chat, etc.)
+const MIN_LEFT_CONTENT_WIDTH = 200;
+// Minimum width for the editor sidebar
+const MIN_EDITOR_WIDTH = 280;
 
 export default function EditorSidebar({
   openFiles,
@@ -53,6 +58,49 @@ export default function EditorSidebar({
   const handleActiveFileSaveHandlerRegistration = currentFileId
     ? (handler: (() => Promise<boolean>) | null) => onRegisterSaveHandler(currentFileId, handler)
     : null;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [effectiveWidth, setEffectiveWidth] = useState(editorWidth);
+
+  // Adjust editor width when container size changes to ensure buttons are always visible
+  useEffect(() => {
+    if (!editingFile || isMobile || poppedOut) return;
+
+    const updateWidth = () => {
+      if (!containerRef.current) return;
+      const parentElement = containerRef.current.parentElement;
+      if (!parentElement) return;
+
+      const containerWidth = parentElement.clientWidth;
+
+      // Calculate maximum allowed editor width
+      const maxEditorWidth = containerWidth - MIN_LEFT_CONTENT_WIDTH;
+
+      if (maxEditorWidth < MIN_EDITOR_WIDTH) {
+        // Not enough space - pop out the editor so user can still see everything
+        setPoppedOut(true);
+      } else if (editorWidth > maxEditorWidth) {
+        // Editor is too wide - constrain it to ensure left content has space
+        setEffectiveWidth(maxEditorWidth);
+      } else {
+        setEffectiveWidth(editorWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+
+    // Also use ResizeObserver for more accurate detection
+    const resizeObserver = new ResizeObserver(updateWidth);
+    const parentEl = containerRef.current?.parentElement;
+    if (parentEl) {
+      resizeObserver.observe(parentEl);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+      resizeObserver.disconnect();
+    };
+  }, [editingFile, isMobile, poppedOut, editorWidth]);
 
   if (!editingFile) {
     return null;
@@ -78,7 +126,7 @@ export default function EditorSidebar({
   const useFlexLayout = editorExpanded || (fillSpace && !hasManualWidth);
 
   return (
-    <>
+    <div ref={containerRef} className={`flex h-full flex-shrink-0 min-w-0 ${editorExpanded ? 'flex-1' : ''}`}>
       {!editorExpanded && (
         <div
           ref={resizeHandleRef}
@@ -91,8 +139,8 @@ export default function EditorSidebar({
       )}
 
       <div
-        className={`flex-shrink-0 border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden ${useFlexLayout ? 'flex-1' : ''}`}
-        style={useFlexLayout ? undefined : { width: `${editorWidth}px` }}
+        className={`border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden ${useFlexLayout ? 'flex-1 min-w-0' : `flex-shrink-0 min-w-[${MIN_EDITOR_WIDTH}px]`}`}
+        style={useFlexLayout ? undefined : { width: `${effectiveWidth}px`, minWidth: `${MIN_EDITOR_WIDTH}px` }}
       >
         <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 px-2 py-1 bg-gray-50 dark:bg-gray-900/40">
           {openFiles.map((file) => {
@@ -103,11 +151,10 @@ export default function EditorSidebar({
             return (
               <div
                 key={fileId}
-                className={`flex items-center rounded-md border min-w-0 ${
-                  isActive
+                className={`flex items-center rounded-md border min-w-0 ${isActive
                     ? 'border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800'
                     : 'border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/60'
-                }`}
+                  }`}
               >
                 <button
                   type="button"
@@ -147,6 +194,6 @@ export default function EditorSidebar({
           onRegisterSaveHandler={handleActiveFileSaveHandlerRegistration}
         />
       </div>
-    </>
+    </div>
   );
 }

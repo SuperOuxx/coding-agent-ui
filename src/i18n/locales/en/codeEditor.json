@@ -30,5 +30,9 @@
     "lines": "Lines:",
     "characters": "Characters:",
     "shortcuts": "Press Ctrl+S to save • Esc to close"
+  },
+  "binaryFile": {
+    "title": "Binary File",
+    "message": "The file \"{{fileName}}\" cannot be displayed in the text editor because it is a binary file."
   }
 }

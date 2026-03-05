@@ -22,6 +22,7 @@ const isMarkdownFileByName = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLowerCase();
   return extension === 'md' || extension === 'markdown';
 };
+import CodeEditorBinaryFile from './subcomponents/CodeEditorBinaryFile';
 
 type CodeEditorProps = {
   file: CodeEditorFile;
@@ -70,6 +71,7 @@ export default function CodeEditor({
     saveSuccess,
     saveError,
     isDirty,
+    isBinary,
     handleSave,
     handleDownload,
   } = useCodeEditorDocument({
@@ -192,6 +194,21 @@ export default function CodeEditor({
         isDarkMode={isDarkMode}
         isSidebar={isSidebar}
         loadingText={t('loading', { fileName: file.name })}
+      />
+    );
+  }
+
+  // Binary file display
+  if (isBinary) {
+    return (
+      <CodeEditorBinaryFile
+        file={file}
+        isSidebar={isSidebar}
+        isFullscreen={isFullscreen}
+        onClose={onClose}
+        onToggleFullscreen={() => setIsFullscreen((previous) => !previous)}
+        title={t('binaryFile.title', 'Binary File')}
+        message={t('binaryFile.message', 'The file "{{fileName}}" cannot be displayed in the text editor because it is a binary file.', { fileName: file.name })}
       />
     );
   }

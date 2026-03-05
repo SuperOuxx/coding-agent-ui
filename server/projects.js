@@ -66,6 +66,7 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import os from 'os';
 import sessionManager from './sessionManager.js';
+import { applyCustomSessionNames } from './database/db.js';
 
 // Import TaskMaster detection functions
 async function detectTaskMasterFolder(projectPath) {
@@ -533,6 +534,7 @@ async function getProjects(progressCallback = null) {
           total: 0
         };
       }
+      applyCustomSessionNames(project.sessions, 'claude');
 
       // Also fetch Cursor sessions for this project
       try {
@@ -541,6 +543,7 @@ async function getProjects(progressCallback = null) {
         console.warn(`Could not load Cursor sessions for project ${entry.name}:`, e.message);
         project.cursorSessions = [];
       }
+      applyCustomSessionNames(project.cursorSessions, 'cursor');
 
       // Also fetch Codex sessions for this project
       try {
@@ -551,6 +554,7 @@ async function getProjects(progressCallback = null) {
         console.warn(`Could not load Codex sessions for project ${entry.name}:`, e.message);
         project.codexSessions = [];
       }
+      applyCustomSessionNames(project.codexSessions, 'codex');
 
       // Also fetch Gemini sessions for this project
       try {
@@ -559,6 +563,7 @@ async function getProjects(progressCallback = null) {
         console.warn(`Could not load Gemini sessions for project ${entry.name}:`, e.message);
         project.geminiSessions = [];
       }
+      applyCustomSessionNames(project.geminiSessions, 'gemini');
 
       // Add TaskMaster detection
       try {
@@ -642,6 +647,7 @@ async function getProjects(progressCallback = null) {
       } catch (e) {
         console.warn(`Could not load Cursor sessions for manual project ${projectName}:`, e.message);
       }
+      applyCustomSessionNames(project.cursorSessions, 'cursor');
 
       // Try to fetch Codex sessions for manual projects too
       try {
@@ -651,6 +657,7 @@ async function getProjects(progressCallback = null) {
       } catch (e) {
         console.warn(`Could not load Codex sessions for manual project ${projectName}:`, e.message);
       }
+      applyCustomSessionNames(project.codexSessions, 'codex');
 
       // Try to fetch Gemini sessions for manual projects too
       try {
@@ -658,6 +665,7 @@ async function getProjects(progressCallback = null) {
       } catch (e) {
         console.warn(`Could not load Gemini sessions for manual project ${projectName}:`, e.message);
       }
+      applyCustomSessionNames(project.geminiSessions, 'gemini');
 
       // Add TaskMaster detection for manual projects
       try {
@@ -1146,10 +1154,13 @@ async function renameProject(projectName, newDisplayName) {
 
   if (!newDisplayName || newDisplayName.trim() === '') {
     // Remove custom name if empty, will fall back to auto-generated
-    delete config[projectName];
+    if (config[projectName]) {
+      delete config[projectName].displayName;
+    }
   } else {
-    // Set custom display name
+    // Set custom display name, preserving other properties (manuallyAdded, originalPath)
     config[projectName] = {
+      ...config[projectName],
       displayName: newDisplayName.trim()
     };
   }

@@ -674,7 +674,7 @@ export function useChatComposerState({
           }
 
           for (const file of attachedFiles) {
-            const response = await api.uploadFile(selectedProject.name, file);
+            const response = await api.uploadFiles(selectedProject.name, file);
             if (!response.ok) {
               throw new Error(`Failed to upload file: ${file.name}`);
             }
@@ -719,7 +719,7 @@ export function useChatComposerState({
       };
 
       setChatMessages((previous) => [...previous, userMessage]);
-      setIsLoading(true);
+      setIsLoading(true); // Processing banner starts
       setCanAbortSession(true);
       setClaudeStatus({
         text: 'Processing',
