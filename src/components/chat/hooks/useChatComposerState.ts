@@ -13,7 +13,6 @@ import { useDropzone } from 'react-dropzone';
 import { api, authenticatedFetch } from '../../../utils/api';
 
 import { thinkingModes } from '../constants/thinkingModes';
-
 import { grantClaudeToolPermission } from '../utils/chatPermissions';
 import { safeLocalStorage } from '../utils/chatStorage';
 import type {
@@ -21,10 +20,10 @@ import type {
   PendingPermissionRequest,
   PermissionMode,
 } from '../types/types';
-import { useFileMentions } from './useFileMentions';
-import { type SlashCommand, useSlashCommands } from './useSlashCommands';
 import type { Project, ProjectSession, SessionProvider } from '../../../types/app';
 import { escapeRegExp } from '../utils/chatFormatting';
+import { useFileMentions } from './useFileMentions';
+import { type SlashCommand, useSlashCommands } from './useSlashCommands';
 
 type PendingViewSession = {
   sessionId: string | null;

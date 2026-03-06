@@ -4,6 +4,8 @@ import { cn } from '../../../lib/utils';
 import FileContextMenu from '../../FileContextMenu';
 import { Input } from '../../ui/input';
 import type { FileTreeNode as FileTreeNodeType, FileTreeViewMode } from '../types/types';
+import { Input } from '../../../shared/view/ui';
+import FileContextMenu from './FileContextMenu';
 
 type FileTreeNodeProps = {
   item: FileTreeNodeType;
@@ -40,7 +42,7 @@ type TreeItemIconProps = {
 function TreeItemIcon({ item, isOpen, renderFileIcon }: TreeItemIconProps) {
   if (item.type === 'directory') {
     return (
-      <span className="flex items-center gap-0.5 flex-shrink-0">
+      <span className="flex flex-shrink-0 items-center gap-0.5">
         <ChevronRight
           className={cn(
             'w-3.5 h-3.5 text-muted-foreground/70 transition-transform duration-150',
@@ -48,15 +50,15 @@ function TreeItemIcon({ item, isOpen, renderFileIcon }: TreeItemIconProps) {
           )}
         />
         {isOpen ? (
-          <FolderOpen className="w-4 h-4 text-blue-500 flex-shrink-0" />
+          <FolderOpen className="h-4 w-4 flex-shrink-0 text-blue-500" />
         ) : (
-          <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
         )}
       </span>
     );
   }
 
-  return <span className="flex items-center flex-shrink-0 ml-[18px]">{renderFileIcon(item.name)}</span>;
+  return <span className="ml-[18px] flex flex-shrink-0 items-center">{renderFileIcon(item.name)}</span>;
 }
 
 export default function FileTreeNode({
@@ -202,7 +204,7 @@ export default function FileTreeNode({
       {isDirectory && isOpen && hasChildren && (
         <div className="relative">
           <span
-            className="absolute top-0 bottom-0 border-l border-border/40"
+            className="absolute bottom-0 top-0 border-l border-border/40"
             style={{ left: `${level * 16 + 14}px` }}
             aria-hidden="true"
           />

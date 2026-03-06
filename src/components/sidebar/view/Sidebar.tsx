@@ -6,6 +6,8 @@ import { useUiPreferences } from '../../../hooks/useUiPreferences';
 import { useSidebarController } from '../hooks/useSidebarController';
 import { useTaskMaster } from '../../../contexts/TaskMasterContext';
 import { useTasksSettings } from '../../../contexts/TasksSettingsContext';
+import type { Project, SessionProvider } from '../../../types/app';
+import type { MCPServerStatus, SidebarProps } from '../types/types';
 import SidebarCollapsed from './subcomponents/SidebarCollapsed';
 import SidebarContent from './subcomponents/SidebarContent';
 import SidebarModals from './subcomponents/SidebarModals';
@@ -67,7 +69,6 @@ function Sidebar({
     sessionDeleteConfirmation,
     showVersionModal,
     filteredProjects,
-    handleTouchClick,
     toggleProject,
     handleSessionClick,
     toggleStarProject,
@@ -209,7 +210,6 @@ function Sidebar({
     onSaveEditingSession: (projectName: string, sessionId: string, summary: string, provider: SessionProvider) => {
       void updateSessionSummary(projectName, sessionId, summary, provider);
     },
-    touchHandlerFactory: handleTouchClick,
     t,
   };
 

@@ -76,7 +76,7 @@ export default function CodeEditorHeader({
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{file.path}</p>
+          <p className="truncate text-xs text-gray-500 dark:text-gray-400">{file.path}</p>
         </div>
       </div>
 
@@ -117,12 +117,12 @@ export default function CodeEditorHeader({
             onClick={onToggleMarkdownPreview}
             className={`p-1.5 rounded-md flex items-center justify-center transition-colors ${
               markdownPreview
-                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+                ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
             }`}
             title={markdownPreview ? labels.editMarkdown : labels.previewMarkdown}
           >
-            {markdownPreview ? <Code2 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {markdownPreview ? <Code2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         )}
 
@@ -132,7 +132,7 @@ export default function CodeEditorHeader({
           className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
           title={labels.settings}
         >
-          <SettingsIcon className="w-4 h-4" />
+          <SettingsIcon className="h-4 w-4" />
         </button>
 
         <button
@@ -141,7 +141,7 @@ export default function CodeEditorHeader({
           className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
           title={labels.download}
         >
-          <Download className="w-4 h-4" />
+          <Download className="h-4 w-4" />
         </button>
 
         <button
@@ -150,17 +150,17 @@ export default function CodeEditorHeader({
           disabled={saving}
           className={`p-1.5 rounded-md disabled:opacity-50 flex items-center justify-center transition-colors ${
             saveSuccess
-              ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+              ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
           }`}
           title={saveTitle}
         >
           {saveSuccess ? (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           ) : (
-            <Save className="w-4 h-4" />
+            <Save className="h-4 w-4" />
           )}
         </button>
 
@@ -171,7 +171,7 @@ export default function CodeEditorHeader({
             className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
             title={isFullscreen ? labels.exitFullscreen : labels.fullscreen}
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
         )}
 
@@ -181,7 +181,7 @@ export default function CodeEditorHeader({
           className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
           title={labels.close}
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>

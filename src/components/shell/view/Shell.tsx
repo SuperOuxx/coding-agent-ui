@@ -224,7 +224,7 @@ export default function Shell({
   const overlayDescription = overlayMode === 'connecting' ? connectingDescription : readyDescription;
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 w-full">
+    <div className="flex h-full w-full flex-col bg-gray-900">
       <ShellHeader
         isConnected={isConnected}
         isInitialized={isInitialized}
@@ -243,7 +243,7 @@ export default function Shell({
         disableRestart={isRestarting || isConnected}
       />
 
-      <div className="flex-1 p-2 overflow-hidden relative">
+      <div className="relative flex-1 overflow-hidden p-2">
         <div
           ref={terminalContainerRef}
           className="h-full w-full focus:outline-none"
