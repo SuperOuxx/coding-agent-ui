@@ -8,13 +8,11 @@ import { useTaskMaster } from '../../../contexts/TaskMasterContext';
 import { useTasksSettings } from '../../../contexts/TasksSettingsContext';
 import type { Project, SessionProvider } from '../../../types/app';
 import type { MCPServerStatus, SidebarProps } from '../types/types';
+import { api } from '../../../utils/api';
+import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
 import SidebarCollapsed from './subcomponents/SidebarCollapsed';
 import SidebarContent from './subcomponents/SidebarContent';
 import SidebarModals from './subcomponents/SidebarModals';
-import type { Project, SessionProvider } from '../../../types/app';
-import type { SidebarProjectListProps } from './subcomponents/SidebarProjectList';
-import type { MCPServerStatus, SidebarProps } from '../types/types';
-import { api } from '../../../utils/api';
 
 type TaskMasterSidebarContext = {
   setCurrentProject: (project: Project) => void;

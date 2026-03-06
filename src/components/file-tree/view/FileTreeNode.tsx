@@ -1,8 +1,6 @@
 import type { ReactNode, RefObject } from 'react';
 import { ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import FileContextMenu from '../../FileContextMenu';
-import { Input } from '../../ui/input';
 import type { FileTreeNode as FileTreeNodeType, FileTreeViewMode } from '../types/types';
 import { Input } from '../../../shared/view/ui';
 import FileContextMenu from './FileContextMenu';
@@ -130,7 +128,7 @@ export default function FileTreeNode({
               handleConfirmRename();
             }, 100);
           }}
-          className="h-6 text-sm flex-1"
+          className="h-6 flex-1 text-sm"
           disabled={operationLoading}
         />
       </div>
@@ -145,23 +143,23 @@ export default function FileTreeNode({
     >
       {viewMode === 'detailed' ? (
         <>
-          <div className="col-span-5 flex items-center gap-1.5 min-w-0">
+          <div className="col-span-5 flex min-w-0 items-center gap-1.5">
             <TreeItemIcon item={item} isOpen={isOpen} renderFileIcon={renderFileIcon} />
             <span className={nameClassName}>{item.name}</span>
           </div>
-          <div className="col-span-2 text-sm text-muted-foreground tabular-nums">
+          <div className="col-span-2 text-sm tabular-nums text-muted-foreground">
             {item.type === 'file' ? formatFileSize(item.size) : ''}
           </div>
           <div className="col-span-3 text-sm text-muted-foreground">{formatRelativeTime(item.modified)}</div>
-          <div className="col-span-2 text-sm text-muted-foreground font-mono">{item.permissionsRwx || ''}</div>
+          <div className="col-span-2 font-mono text-sm text-muted-foreground">{item.permissionsRwx || ''}</div>
         </>
       ) : viewMode === 'compact' ? (
         <>
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
             <TreeItemIcon item={item} isOpen={isOpen} renderFileIcon={renderFileIcon} />
             <span className={nameClassName}>{item.name}</span>
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-shrink-0 ml-2">
+          <div className="ml-2 flex flex-shrink-0 items-center gap-3 text-sm text-muted-foreground">
             {item.type === 'file' && (
               <>
                 <span className="tabular-nums">{formatFileSize(item.size)}</span>

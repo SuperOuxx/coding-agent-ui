@@ -156,17 +156,17 @@ const FileContextMenu = ({
         isLoading && 'pointer-events-none'
       )}
     >
-      {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
+      {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
       <span className="flex-1">{label}</span>
       {shortcut && (
-        <span className="text-xs text-muted-foreground font-mono">{shortcut}</span>
+        <span className="font-mono text-xs text-muted-foreground">{shortcut}</span>
       )}
     </button>
   );
 
   // Menu divider
   const MenuDivider = () => (
-    <div className="h-px bg-border my-1 mx-2" />
+    <div className="mx-2 my-1 h-px bg-border" />
   );
 
   // Build menu items based on context
@@ -295,7 +295,7 @@ const FileContextMenu = ({
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-4">
-              <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
+              <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
               <span className="ml-2 text-sm text-muted-foreground">
                 {t('fileTree.context.loading', 'Loading...')}
               </span>

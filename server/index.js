@@ -1208,7 +1208,7 @@ app.delete('/api/projects/:projectName/files', authenticateToken, async (req, re
     }
 });
 
-// POST /api/projects/:projectName/files/upload - Upload files
+// POST /api/projects/:projectName/files/upload-tree - Upload files for file tree drag/drop
 // Dynamic import of multer for file uploads
 const uploadFilesHandler = async (req, res) => {
     // Dynamic import of multer
@@ -1370,7 +1370,7 @@ const uploadFilesHandler = async (req, res) => {
     });
 };
 
-app.post('/api/projects/:projectName/files/upload', authenticateToken, uploadFilesHandler);
+app.post('/api/projects/:projectName/files/upload-tree', authenticateToken, uploadFilesHandler);
 
 // WebSocket connection handler that routes based on URL path
 wss.on('connection', (ws, request) => {

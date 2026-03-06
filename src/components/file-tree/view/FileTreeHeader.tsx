@@ -1,8 +1,7 @@
 import { ChevronDown, Eye, FileText, FolderPlus, List, RefreshCw, Search, TableProperties, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
 import { cn } from '../../../lib/utils';
+import { Button, Input } from '../../../shared/view/ui';
 import type { FileTreeViewMode } from '../types/types';
 
 type FileTreeHeaderProps = {
@@ -35,7 +34,7 @@ export default function FileTreeHeader({
   const { t } = useTranslation();
 
   return (
-    <div className="px-3 pt-3 pb-2 border-b border-border space-y-2">
+    <div className="space-y-2 border-b border-border px-3 pb-2 pt-3">
       {/* Title and Toolbar */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-foreground">{t('fileTree.files')}</h3>
@@ -51,7 +50,7 @@ export default function FileTreeHeader({
               aria-label={t('fileTree.newFile', 'New File (Cmd+N)')}
               disabled={operationLoading}
             >
-              <FileText className="w-3.5 h-3.5" />
+              <FileText className="h-3.5 w-3.5" />
             </Button>
           )}
           {onNewFolder && (
@@ -64,7 +63,7 @@ export default function FileTreeHeader({
               aria-label={t('fileTree.newFolder', 'New Folder (Cmd+Shift+N)')}
               disabled={operationLoading}
             >
-              <FolderPlus className="w-3.5 h-3.5" />
+              <FolderPlus className="h-3.5 w-3.5" />
             </Button>
           )}
           {onRefresh && (
@@ -89,11 +88,11 @@ export default function FileTreeHeader({
               title={t('fileTree.collapseAll', 'Collapse All')}
               aria-label={t('fileTree.collapseAll', 'Collapse All')}
             >
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           )}
           {/* Divider */}
-          <div className="w-px h-4 bg-border mx-0.5" />
+          <div className="mx-0.5 h-4 w-px bg-border" />
           {/* View mode buttons */}
           <Button
             variant={viewMode === 'simple' ? 'default' : 'ghost'}

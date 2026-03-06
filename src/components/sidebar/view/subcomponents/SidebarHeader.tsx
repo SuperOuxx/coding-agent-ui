@@ -87,17 +87,17 @@ export default function SidebarHeader({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-accent/80 rounded-lg"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
               onClick={onInitializeUploads}
               disabled={!canInitializeUploads || isInitializingUploads}
               title={t('tooltips.initializeUploads')}
             >
-              <FolderUp className={`w-3.5 h-3.5 ${isInitializingUploads ? 'animate-pulse' : ''}`} />
+              <FolderUp className={`h-3.5 w-3.5 ${isInitializingUploads ? 'animate-pulse' : ''}`} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-accent/80 rounded-lg"
+              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
               onClick={onCreateProject}
               title={t('tooltips.createProject')}
             >
@@ -168,15 +168,15 @@ export default function SidebarHeader({
               <RefreshCw className={`h-4 w-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
             <button
-              className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center active:scale-95 transition-all"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50 transition-all active:scale-95"
               onClick={onInitializeUploads}
               disabled={!canInitializeUploads || isInitializingUploads}
               title={t('tooltips.initializeUploads')}
             >
-              <FolderUp className={`w-4 h-4 text-muted-foreground ${isInitializingUploads ? 'animate-pulse' : ''}`} />
+              <FolderUp className={`h-4 w-4 text-muted-foreground ${isInitializingUploads ? 'animate-pulse' : ''}`} />
             </button>
             <button
-              className="w-8 h-8 rounded-lg bg-primary/90 text-primary-foreground flex items-center justify-center active:scale-95 transition-all"
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/90 text-primary-foreground transition-all active:scale-95"
               onClick={onCreateProject}
             >
               <FolderPlus className="h-4 w-4" />

@@ -182,17 +182,17 @@ export default function MarkdownFileEditor({ content, onChange }: MarkdownFileEd
 
   if (errorMessage) {
     return (
-      <div className="h-full flex items-center justify-center px-4 text-sm text-red-700 dark:text-red-300">
+      <div className="flex h-full items-center justify-center px-4 text-sm text-red-700 dark:text-red-300">
         Failed to initialize Vditor: {errorMessage}
       </div>
     );
   }
 
   return (
-    <div className={`h-full relative ${isDarkMode ? 'vditor-theme-shell-dark' : 'vditor-theme-shell-light'}`}>
+    <div className={`relative h-full ${isDarkMode ? 'vditor-theme-shell-dark' : 'vditor-theme-shell-light'}`}>
       <style>{vditorThemeStyle}</style>
       {isLoading && (
-        <div className="absolute inset-0 z-10 bg-background/80 flex items-center justify-center text-sm text-muted-foreground">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 text-sm text-muted-foreground">
           Loading Vditor...
         </div>
       )}

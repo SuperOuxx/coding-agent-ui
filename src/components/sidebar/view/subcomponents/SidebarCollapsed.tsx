@@ -55,11 +55,11 @@ export default function SidebarCollapsed({
         href={DISCORD_INVITE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-accent/80 transition-colors group"
+        className="group flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-accent/80"
         aria-label={t('actions.joinCommunity')}
         title={t('actions.joinCommunity')}
       >
-        <DiscordIcon className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <DiscordIcon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-foreground" />
       </a>
 
       {/* Update indicator */}

@@ -158,7 +158,7 @@ export default function SidebarSessionItem({
           </div>
         </Button>
 
-        <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 transform items-center gap-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
             {editingSession === session.id ? (
               <>
                 <input
@@ -201,25 +201,25 @@ export default function SidebarSessionItem({
             ) : (
               <>
                 <button
-                  className="w-6 h-6 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40 rounded flex items-center justify-center"
+                  className="flex h-6 w-6 items-center justify-center rounded bg-gray-50 hover:bg-gray-100 dark:bg-gray-900/20 dark:hover:bg-gray-900/40"
                   onClick={(event) => {
                     event.stopPropagation();
                     onStartEditingSession(session.id, sessionView.sessionName);
                   }}
                   title={t('tooltips.editSessionName')}
                 >
-                  <Edit2 className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                  <Edit2 className="h-3 w-3 text-gray-600 dark:text-gray-400" />
                 </button>
                 {!sessionView.isCursorSession && (
                   <button
-                    className="w-6 h-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 rounded flex items-center justify-center"
+                    className="flex h-6 w-6 items-center justify-center rounded bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40"
                     onClick={(event) => {
                       event.stopPropagation();
                       requestDeleteSession();
                     }}
                     title={t('tooltips.deleteSession')}
                   >
-                    <Trash2 className="w-3 h-3 text-red-600 dark:text-red-400" />
+                    <Trash2 className="h-3 w-3 text-red-600 dark:text-red-400" />
                   </button>
                 )}
               </>

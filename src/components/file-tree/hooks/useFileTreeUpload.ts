@@ -154,7 +154,7 @@ export const useFileTreeUpload = ({
       formData.append('relativePaths', JSON.stringify(relativePaths));
 
       const response = await api.post(
-        `/projects/${encodeURIComponent(selectedProject!.name)}/files/upload`,
+        `/projects/${encodeURIComponent(selectedProject!.name)}/files/upload-tree`,
         formData
       );
 

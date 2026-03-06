@@ -1,3 +1,4 @@
+import React from 'react';
 import { Settings as SettingsIcon, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ProviderLoginModal from '../../provider-auth/view/ProviderLoginModal';
@@ -12,7 +13,7 @@ import GitSettingsTab from '../view/tabs/git-settings/GitSettingsTab';
 import TasksSettingsTab from '../view/tabs/tasks-settings/TasksSettingsTab';
 import WorkspaceSettingsTab from '../view/tabs/workspace-settings/WorkspaceSettingsTab';
 import { useSettingsController } from '../hooks/useSettingsController';
-import type { SettingsProps } from '../types/types';
+import type { SettingsProps, AgentProvider } from '../types/types';
 
 function getAuthStatusByProvider({
   loginProvider,
@@ -136,11 +137,11 @@ function Settings({ isOpen, onClose, projects = [], initialTab = 'agents' }: Set
                 projectSortOrder={projectSortOrder}
                 onProjectSortOrderChange={setProjectSortOrder}
                 codeEditorSettings={codeEditorSettings}
-                onCodeEditorThemeChange={(value) => updateCodeEditorSetting('theme', value)}
-                onCodeEditorWordWrapChange={(value) => updateCodeEditorSetting('wordWrap', value)}
-                onCodeEditorShowMinimapChange={(value) => updateCodeEditorSetting('showMinimap', value)}
-                onCodeEditorLineNumbersChange={(value) => updateCodeEditorSetting('lineNumbers', value)}
-                onCodeEditorFontSizeChange={(value) => updateCodeEditorSetting('fontSize', value)}
+                onCodeEditorThemeChange={(value: any) => updateCodeEditorSetting('theme', value)}
+                onCodeEditorWordWrapChange={(value: any) => updateCodeEditorSetting('wordWrap', value)}
+                onCodeEditorShowMinimapChange={(value: any) => updateCodeEditorSetting('showMinimap', value)}
+                onCodeEditorLineNumbersChange={(value: any) => updateCodeEditorSetting('lineNumbers', value)}
+                onCodeEditorFontSizeChange={(value: any) => updateCodeEditorSetting('fontSize', value)}
               />
             )}
 

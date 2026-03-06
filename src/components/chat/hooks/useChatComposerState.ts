@@ -4,14 +4,10 @@ import type {
   ClipboardEvent,
   Dispatch,
   FormEvent,
-  KeyboardEvent,
-  MouseEvent,
   SetStateAction,
-  TouchEvent,
 } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { api, authenticatedFetch } from '../../../utils/api';
-
 import { thinkingModes } from '../constants/thinkingModes';
 import { grantClaudeToolPermission } from '../utils/chatPermissions';
 import { safeLocalStorage } from '../utils/chatStorage';
@@ -221,7 +217,7 @@ export function useChatComposerState({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHighlightRef = useRef<HTMLDivElement>(null);
   const handleSubmitRef = useRef<
-    ((event: FormEvent<HTMLFormElement> | MouseEvent | TouchEvent | KeyboardEvent<HTMLTextAreaElement>) => Promise<void>) | null
+    ((event: any) => Promise<void>) | null
   >(null);
   const inputValueRef = useRef(input);
 
@@ -557,24 +553,23 @@ export function useChatComposerState({
 
   const handleAttachmentFiles = useCallback((files: File[]) => {
     const oversizedFileNames: string[] = [];
+    const acceptedFiles: File[] = [];
 
-    const acceptedFiles = files.filter((file) => {
+    files.forEach((file) => {
       try {
         if (!file || typeof file !== 'object') {
           console.warn('Invalid file object:', file);
-          return false;
+          return;
         }
 
         if (typeof file.size !== 'number' || file.size > MAX_ATTACHMENT_SIZE) {
           oversizedFileNames.push(file.name || 'Unknown file');
-          return false;
+          return;
         }
 
         acceptedFiles.push(file);
-        return true;
       } catch (error) {
         console.error('Error validating file:', error, file);
-        return false;
       }
     });
 
@@ -626,21 +621,24 @@ export function useChatComposerState({
     [handleAttachmentFiles],
   );
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+  const dropzoneConfig: any = {
     maxSize: MAX_ATTACHMENT_SIZE,
     maxFiles: MAX_ATTACHMENTS,
     onDrop: handleAttachmentFiles,
     noClick: true,
     noKeyboard: true,
-  });
+  };
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone(dropzoneConfig);
 
   const handleSubmit = useCallback(
     async (
-      event: FormEvent<HTMLFormElement> | MouseEvent | TouchEvent | KeyboardEvent<HTMLTextAreaElement>,
+      event: any,
     ) => {
       event.preventDefault();
       const currentInput = inputValueRef.current;
-      if (!currentInput.trim() || isLoading || !selectedProject) {
+      const hasInputText = currentInput.trim().length > 0;
+      const hasAttachments = attachedFiles.length > 0;
+      if ((!hasInputText && !hasAttachments) || isLoading || !selectedProject) {
         return;
       }
 
@@ -997,7 +995,7 @@ export function useChatComposerState({
   );
 
   const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    (event: any) => {
       if (handleCommandMenuKeyDown(event)) {
         return;
       }
@@ -1038,7 +1036,7 @@ export function useChatComposerState({
   );
 
   const handleTextareaClick = useCallback(
-    (event: MouseEvent<HTMLTextAreaElement>) => {
+    (event: any) => {
       setCursorPosition(event.currentTarget.selectionStart);
     },
     [setCursorPosition],

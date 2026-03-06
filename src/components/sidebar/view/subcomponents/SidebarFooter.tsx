@@ -83,14 +83,14 @@ export default function SidebarFooter({
       <div className="nav-divider" />
 
       {/* Desktop Discord */}
-      <div className="hidden md:block px-2 pt-1.5">
+      <div className="hidden px-2 pt-1.5 md:block">
         <a
           href={DISCORD_INVITE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
         >
-          <DiscordIcon className="w-3.5 h-3.5" />
+          <DiscordIcon className="h-3.5 w-3.5" />
           <span className="text-sm">{t('actions.joinCommunity')}</span>
         </a>
       </div>
@@ -107,14 +107,14 @@ export default function SidebarFooter({
       </div>
 
       {/* Mobile Discord */}
-      <div className="md:hidden px-3 pt-3">
+      <div className="px-3 pt-3 md:hidden">
         <a
           href={DISCORD_INVITE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full h-12 bg-muted/40 hover:bg-muted/60 rounded-xl flex items-center gap-3.5 px-4 active:scale-[0.98] transition-all"
+          className="flex h-12 w-full items-center gap-3.5 rounded-xl bg-muted/40 px-4 transition-all hover:bg-muted/60 active:scale-[0.98]"
         >
-          <div className="w-8 h-8 rounded-xl bg-background/80 flex items-center justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-background/80">
             <DiscordIcon className="w-4.5 h-4.5 text-muted-foreground" />
           </div>
           <span className="text-base font-medium text-foreground">{t('actions.joinCommunity')}</span>
@@ -122,7 +122,7 @@ export default function SidebarFooter({
       </div>
 
       {/* Mobile settings */}
-      <div className="md:hidden px-3 pt-2 pb-20">
+      <div className="px-3 pb-20 pt-2 md:hidden">
         <button
           className="flex h-12 w-full items-center gap-3.5 rounded-xl bg-muted/40 px-4 transition-all hover:bg-muted/60 active:scale-[0.98]"
           onClick={onShowSettings}

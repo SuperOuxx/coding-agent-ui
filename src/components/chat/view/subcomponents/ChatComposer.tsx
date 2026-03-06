@@ -240,7 +240,7 @@ export default function ChatComposer({
         )}
 
         {attachedFiles.length > 0 && (
-          <div className="mb-2 p-2 bg-muted/40 rounded-xl">
+          <div className="mb-2 rounded-xl bg-muted/40 p-2">
             <div className="flex flex-wrap gap-2">
               {attachedFiles.map((file, index) => (
                 <ImageAttachment
@@ -298,7 +298,7 @@ export default function ChatComposer({
               id="skill-select"
               value={selectedSkill}
               onChange={(event) => onSkillSelect(event.target.value)}
-              className="w-full px-3 py-2 text-sm bg-card/90 border border-border/50 rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30"
+              className="w-full rounded-xl border border-border/50 bg-card/90 px-3 py-2 text-sm text-foreground focus:border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Select a skill...</option>
               {skills.map((skill) => (
@@ -344,7 +344,7 @@ export default function ChatComposer({
             <button
               type="button"
               onClick={openAttachmentPicker}
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-accent/60 rounded-xl transition-colors"
+              className="absolute left-2 top-1/2 -translate-y-1/2 transform rounded-xl p-2 transition-colors hover:bg-accent/60"
               title={t('input.attachFiles')}
             >
               <svg className="h-5 w-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,7 +363,7 @@ export default function ChatComposer({
 
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
               onMouseDown={(event) => {
                 event.preventDefault();
                 onSubmit(event);

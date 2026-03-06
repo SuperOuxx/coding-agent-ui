@@ -50,7 +50,6 @@ export type SidebarProjectListProps = {
   onStartEditingSession: (sessionId: string, initialName: string) => void;
   onCancelEditingSession: () => void;
   onSaveEditingSession: (projectName: string, sessionId: string, summary: string, provider: SessionProvider) => void;
-  touchHandlerFactory: TouchHandlerFactory;
   t: TFunction;
 };
 
@@ -118,43 +117,43 @@ export default function SidebarProjectList({
       {!showProjects
         ? state
         : filteredProjects.map((project) => (
-            <SidebarProjectItem
-              key={project.name}
-              project={project}
-              selectedProject={selectedProject}
-              selectedSession={selectedSession}
-              isExpanded={expandedProjects.has(project.name)}
-              isDeleting={deletingProjects.has(project.name)}
-              isStarred={isProjectStarred(project.name)}
-              editingProject={editingProject}
-              editingName={editingName}
-              sessions={getProjectSessions(project)}
-              initialSessionsLoaded={initialSessionsLoaded.has(project.name)}
-              isLoadingSessions={Boolean(loadingSessions[project.name])}
-              currentTime={currentTime}
-              editingSession={editingSession}
-              editingSessionName={editingSessionName}
-              tasksEnabled={tasksEnabled}
-              mcpServerStatus={mcpServerStatus}
-              onEditingNameChange={onEditingNameChange}
-              onToggleProject={onToggleProject}
-              onProjectSelect={onProjectSelect}
-              onToggleStarProject={onToggleStarProject}
-              onStartEditingProject={onStartEditingProject}
-              onCancelEditingProject={onCancelEditingProject}
-              onSaveProjectName={onSaveProjectName}
-              onDeleteProject={onDeleteProject}
-              onSessionSelect={onSessionSelect}
-              onDeleteSession={onDeleteSession}
-              onLoadMoreSessions={onLoadMoreSessions}
-              onNewSession={onNewSession}
-              onEditingSessionNameChange={onEditingSessionNameChange}
-              onStartEditingSession={onStartEditingSession}
-              onCancelEditingSession={onCancelEditingSession}
-              onSaveEditingSession={onSaveEditingSession}
-              t={t}
-            />
-          ))}
+          <SidebarProjectItem
+            key={project.name}
+            project={project}
+            selectedProject={selectedProject}
+            selectedSession={selectedSession}
+            isExpanded={expandedProjects.has(project.name)}
+            isDeleting={deletingProjects.has(project.name)}
+            isStarred={isProjectStarred(project.name)}
+            editingProject={editingProject}
+            editingName={editingName}
+            sessions={getProjectSessions(project)}
+            initialSessionsLoaded={initialSessionsLoaded.has(project.name)}
+            isLoadingSessions={Boolean(loadingSessions[project.name])}
+            currentTime={currentTime}
+            editingSession={editingSession}
+            editingSessionName={editingSessionName}
+            tasksEnabled={tasksEnabled}
+            mcpServerStatus={mcpServerStatus}
+            onEditingNameChange={onEditingNameChange}
+            onToggleProject={onToggleProject}
+            onProjectSelect={onProjectSelect}
+            onToggleStarProject={onToggleStarProject}
+            onStartEditingProject={onStartEditingProject}
+            onCancelEditingProject={onCancelEditingProject}
+            onSaveProjectName={onSaveProjectName}
+            onDeleteProject={onDeleteProject}
+            onSessionSelect={onSessionSelect}
+            onDeleteSession={onDeleteSession}
+            onLoadMoreSessions={onLoadMoreSessions}
+            onNewSession={onNewSession}
+            onEditingSessionNameChange={onEditingSessionNameChange}
+            onStartEditingSession={onStartEditingSession}
+            onCancelEditingSession={onCancelEditingSession}
+            onSaveEditingSession={onSaveEditingSession}
+            t={t}
+          />
+        ))}
     </div>
   );
 }

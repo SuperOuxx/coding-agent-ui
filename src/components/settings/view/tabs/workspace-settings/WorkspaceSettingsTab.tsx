@@ -2,8 +2,7 @@ import { Check, FolderOpen } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { authenticatedFetch } from '../../../../../utils/api';
-import { Button } from '../../../../ui/button';
-import { Input } from '../../../../ui/input';
+import { Button, Input } from '../../../../../shared/view/ui';
 
 type SettingsConfigResponse = {
   success?: boolean;
@@ -114,16 +113,16 @@ export default function WorkspaceSettingsTab() {
   return (
     <div className="space-y-8">
       <div>
-        <div className="flex items-center gap-2 mb-4">
+        <div className="mb-4 flex items-center gap-2">
           <FolderOpen className="h-5 w-5" />
           <h3 className="text-lg font-semibold">{t('workspaceSettings.title')}</h3>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-4">{t('workspaceSettings.description')}</p>
+        <p className="mb-4 text-sm text-muted-foreground">{t('workspaceSettings.description')}</p>
 
-        <div className="p-4 border rounded-lg bg-card space-y-4">
+        <div className="space-y-4 rounded-lg border bg-card p-4">
           <div>
-            <label htmlFor="settings-workspaces-root" className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="settings-workspaces-root" className="mb-2 block text-sm font-medium text-foreground">
               {t('workspaceSettings.inputLabel')}
             </label>
             <Input
@@ -139,10 +138,10 @@ export default function WorkspaceSettingsTab() {
           </div>
 
           <div>
-            <div className="block text-sm font-medium text-foreground mb-2">
+            <div className="mb-2 block text-sm font-medium text-foreground">
               {t('workspaceSettings.resolvedLabel')}
             </div>
-            <code className="block text-xs p-2 rounded bg-muted border border-border break-all">
+            <code className="block break-all rounded border border-border bg-muted p-2 text-xs">
               {resolvedWorkspacesRoot || '-'}
             </code>
             <p className="mt-1 text-xs text-muted-foreground">{t('workspaceSettings.resolvedHelp')}</p>
@@ -154,8 +153,8 @@ export default function WorkspaceSettingsTab() {
             </Button>
 
             {saveStatus === 'success' && (
-              <div className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
-                <Check className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                <Check className="h-4 w-4" />
                 {t('workspaceSettings.status.success')}
               </div>
             )}

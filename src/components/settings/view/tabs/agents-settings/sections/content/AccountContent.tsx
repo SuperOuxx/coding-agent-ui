@@ -107,7 +107,7 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
           </div>
 
           {authStatus.method !== 'api_key' && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
                   <div className={`font-medium ${config.textClass}`}>
@@ -124,7 +124,7 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
                   className={`${config.buttonClass} text-white`}
                   size="sm"
                 >
-                  <LogIn className="w-4 h-4 mr-2" />
+                  <LogIn className="mr-2 h-4 w-4" />
                   {authStatus.authenticated ? t('agents.login.reLoginButton') : t('agents.login.button')}
                 </Button>
               </div>

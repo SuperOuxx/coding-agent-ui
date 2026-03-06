@@ -12,7 +12,7 @@
 
 - 在 `ChatInterface` 中维护附件列表 `attachedFiles`。
 - 用户提交消息时：
-  1. 循环调用 `api.uploadFile(projectName, file)`；
+  1. 循环调用 `api.uploadFiles(projectName, file)`；
   2. 服务端返回 `reference`（统一为 `@...`）；
   3. 将全部引用拼接到用户消息末尾（换行追加）；
   4. 同步进 `fileMentions`，供会话上下文使用。
@@ -44,7 +44,7 @@
 const uploadedReferences = [];
 if (attachedFiles.length > 0) {
   for (const file of attachedFiles) {
-    const response = await api.uploadFile(selectedProject.name, file);
+    const response = await api.uploadFiles(selectedProject.name, file);
     const result = await response.json();
     const reference = result.reference.startsWith('@') ? result.reference : `@${result.reference}`;
     uploadedReferences.push(reference);
@@ -65,7 +65,7 @@ if (uploadedReferences.length > 0) {
 文件：`src/utils/api.js`
 
 ```js
-uploadFile: (projectName, file) => {
+uploadFiles: (projectName, file) => {
   const formData = new FormData();
   formData.append('file', file);
   return authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}/files/upload`, {
