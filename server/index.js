@@ -1432,8 +1432,16 @@ function handleChatConnection(ws) {
     const writer = new WebSocketWriter(ws);
 
     ws.on('message', async (message) => {
+        let parsedMessage = null;
         try {
             const data = JSON.parse(message);
+            parsedMessage = data;
+            const normalizedOptionsBase =
+                data?.options && typeof data.options === 'object' ? data.options : {};
+            const normalizedOptions = {
+                ...normalizedOptionsBase,
+                sessionId: normalizedOptionsBase.sessionId || data?.sessionId || null
+            };
 
             if (data.type === 'claude-command') {
                 console.log('[DEBUG] User message:', data.command || '[Continue/Resume]');
@@ -1441,32 +1449,32 @@ function handleChatConnection(ws) {
                 console.log('🔄 Session:', data.options?.sessionId ? 'Resume' : 'New');
 
                 // Use Claude Agents SDK
-                await queryClaudeSDK(data.command, data.options, writer);
+                await queryClaudeSDK(data.command, normalizedOptions, writer);
             } else if (data.type === 'cursor-command') {
                 console.log('[DEBUG] Cursor message:', data.command || '[Continue/Resume]');
                 console.log('📁 Project:', data.options?.cwd || 'Unknown');
                 console.log('🔄 Session:', data.options?.sessionId ? 'Resume' : 'New');
                 console.log('🤖 Model:', data.options?.model || 'default');
-                await spawnCursor(data.command, data.options, writer);
+                await spawnCursor(data.command, normalizedOptions, writer);
             } else if (data.type === 'codex-command') {
                 console.log('[DEBUG] Codex message:', data.command || '[Continue/Resume]');
                 console.log('📁 Project:', data.options?.projectPath || data.options?.cwd || 'Unknown');
                 console.log('🔄 Session:', data.options?.sessionId ? 'Resume' : 'New');
                 console.log('🤖 Model:', data.options?.model || 'default');
-                await queryCodex(data.command, data.options, writer);
+                await queryCodex(data.command, normalizedOptions, writer);
             } else if (data.type === 'gemini-command') {
                 console.log('[DEBUG] Gemini message:', data.command || '[Continue/Resume]');
                 console.log('📁 Project:', data.options?.projectPath || data.options?.cwd || 'Unknown');
                 console.log('🔄 Session:', data.options?.sessionId ? 'Resume' : 'New');
                 console.log('🤖 Model:', data.options?.model || 'default');
-                await spawnGemini(data.command, data.options, writer);
+                await spawnGemini(data.command, normalizedOptions, writer);
             } else if (data.type === 'cursor-resume') {
                 // Backward compatibility: treat as cursor-command with resume and no prompt
                 console.log('[DEBUG] Cursor resume session (compat):', data.sessionId);
                 await spawnCursor('', {
                     sessionId: data.sessionId,
                     resume: true,
-                    cwd: data.options?.cwd
+                    cwd: normalizedOptions.cwd
                 }, writer);
             } else if (data.type === 'abort-session') {
                 console.log('[DEBUG] Abort session request:', data.sessionId);
@@ -1564,10 +1572,17 @@ function handleChatConnection(ws) {
                 });
             }
         } catch (error) {
-            console.error('[ERROR] Chat WebSocket error:', error.message);
+            const resolvedSessionId =
+                parsedMessage?.sessionId ||
+                parsedMessage?.options?.sessionId ||
+                (typeof writer.getSessionId === 'function' ? writer.getSessionId() : null) ||
+                null;
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('[ERROR] Chat WebSocket error:', errorMessage);
             writer.send({
                 type: 'error',
-                error: error.message
+                error: errorMessage,
+                sessionId: resolvedSessionId
             });
         }
     });

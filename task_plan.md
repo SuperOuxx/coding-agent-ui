@@ -1,47 +1,54 @@
-# Task Plan: Skills Selector By Provider
+# Task Plan: Fix thinking UI stuck during assistant responses
 
 ## Goal
-Implement `docs/feature_3_skills_selector_by_provider.md` end-to-end:
-- backend `GET /api/skills?projectPath=...&provider=...`
-- provider-based skills directory routing
-- frontend skills selector above chat input with provider-specific prefix injection
+Find and fix the root cause of "thinking/processing gets stuck", then verify with reproducible evidence.
 
 ## Current Phase
-Phase 4
+Phase 5
 
 ## Phases
-### Phase 1: Requirements & Discovery
-- [x] Read `docs/feature_3_skills_selector_by_provider.md`
-- [x] Inspect backend route mounts and existing skills route status
-- [x] Inspect chat composer architecture for selector insertion point
+### Phase 1: Reproduce and scope
+- [x] Confirm symptom and affected flow
+- [x] Check upstream fix presence
+- [x] Capture evidence
 - **Status:** complete
 
-### Phase 2: Backend Skills API
-- [x] Add `server/routes/skills.js`
-- [x] Implement provider-based directory collection and frontmatter parsing
-- [x] Mount `/api/skills` route in `server/index.js`
+### Phase 2: Root cause analysis
+- [x] Inspect frontend realtime lifecycle filter
+- [x] Inspect backend websocket terminal/error events
+- [x] Identify deterministic root cause
 - **Status:** complete
 
-### Phase 3: Frontend Selector & Prefix Injection
-- [x] Add skills loading in chat composer state (provider/project driven)
-- [x] Add selected-skill prefix injection (`/` for claude, `$` for codex)
-- [x] Render selector above chat input
+### Phase 3: Implement fix
+- [x] Fix frontend lifecycle filter for unscoped terminal events
+- [x] Ensure generic websocket errors carry session context
+- [x] Improve user-visible error handling for generic `error`
 - **Status:** complete
 
-### Phase 4: Verification & Delivery
-- [x] Run `npm.cmd run typecheck`
-- [x] Run `npm.cmd run build`
-- [x] Update planning artifacts and summarize changed files
+### Phase 4: Verification
+- [x] Run type/build checks
+- [x] Verify stuck lifecycle scenario no longer reproduces
+- [x] Record results
 - **Status:** complete
+
+### Phase 5: Delivery
+- [x] Summarize root cause and code changes
+- [x] Report verification and residual risks
+- **Status:** complete
+
+## Key Questions
+1. Are terminal events ever emitted without `sessionId`?
+2. Can frontend filtering drop such events before lifecycle finalization?
+3. Does backend generic error event include enough session context?
 
 ## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
-| Implement skills state in `useChatComposerState` | Centralizes input mutation logic with existing composer state |
-| Keep selector limited to `claude` and `codex` | Matches feature contract and avoids behavior drift for other providers |
-| Deduplicate by skill folder name (`value`) | Ensures stable inject token and avoids duplicate options |
+| Inspect both frontend and backend | This bug is cross-layer lifecycle state |
+| Keep a defensive frontend fallback | Prevent UI deadlock from incomplete event payloads |
+| Also patch backend catch payload | Reduce ambiguity and future regressions |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| None | - | No blocking runtime/type errors encountered |
+| `rg` regex parse error | 1 | Split and correct search expressions |

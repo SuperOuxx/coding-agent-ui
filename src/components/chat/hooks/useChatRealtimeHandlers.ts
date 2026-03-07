@@ -176,14 +176,11 @@ export function useChatRealtimeHandlers({
       systemInitSessionId && (!activeViewSessionId || systemInitSessionId === activeViewSessionId);
     const shouldBypassSessionFilter = isGlobalMessage || Boolean(isSystemInitForView);
     const isLifecycleMessage = lifecycleMessageTypes.has(messageType);
-    const isUnscopedError =
+    const hasActiveOrPendingViewSession = Boolean(activeViewSessionId) || Boolean(pendingViewSessionRef.current);
+    const isUnscopedLifecycleMessage =
       !latestMessage.sessionId &&
-      pendingViewSessionRef.current &&
-      !pendingViewSessionRef.current.sessionId &&
-      (latestMessage.type === 'claude-error' ||
-        latestMessage.type === 'cursor-error' ||
-        latestMessage.type === 'codex-error' ||
-        latestMessage.type === 'gemini-error');
+      isLifecycleMessage &&
+      hasActiveOrPendingViewSession;
 
     const handleBackgroundLifecycle = (sessionId?: string) => {
       if (!sessionId) {
@@ -256,16 +253,16 @@ export function useChatRealtimeHandlers({
           handleBackgroundLifecycle(latestMessage.sessionId);
           return;
         }
-        if (!isUnscopedError && !hasPendingUnboundSession) {
+        if (!isUnscopedLifecycleMessage && !hasPendingUnboundSession) {
           return;
         }
       }
 
-      if (!latestMessage.sessionId && !isUnscopedError && !hasPendingUnboundSession) {
+      if (!latestMessage.sessionId && !isUnscopedLifecycleMessage && !hasPendingUnboundSession) {
         return;
       }
 
-      if (latestMessage.sessionId !== activeViewSessionId) {
+      if (latestMessage.sessionId && latestMessage.sessionId !== activeViewSessionId) {
         const shouldTreatAsPendingViewLifecycle =
           !activeViewSessionId &&
           hasPendingUnboundSession &&
@@ -1139,6 +1136,22 @@ export function useChatRealtimeHandlers({
         // Generic backend failure (e.g., provider process failed before a provider-specific
         // completion event was emitted). Treat it as terminal for current view lifecycle.
         finalizeLifecycleForCurrentView(latestMessage.sessionId, currentSessionId, selectedSession?.id);
+        {
+          const fallbackError =
+            typeof latestMessage.error === 'string' && latestMessage.error.trim()
+              ? latestMessage.error.trim()
+              : typeof latestMessage.data === 'string' && latestMessage.data.trim()
+                ? latestMessage.data.trim()
+                : 'Unexpected error while processing request';
+          setChatMessages((previous) => [
+            ...previous,
+            {
+              type: 'error',
+              content: `Error: ${fallbackError}`,
+              timestamp: new Date(),
+            },
+          ]);
+        }
         break;
 
       default:
