@@ -91,7 +91,7 @@ export const api = {
       method: 'DELETE',
     }),
   deleteProject: (projectName, force = false) =>
-    authenticatedFetch(`/api/projects/${projectName}${force ? '?force=true' : ''}`, {
+    authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}${force ? '?force=true' : ''}`, {
       method: 'DELETE',
     }),
   createProject: (path) =>
@@ -112,7 +112,7 @@ export const api = {
       body: JSON.stringify({ filePath, content }),
     }),
   getFiles: (projectName, options = {}) =>
-    authenticatedFetch(`/api/projects/${projectName}/files`, options),
+    authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}/files`, options),
 
   // File operations
   createFile: (projectName, { path, type, name }) =>
