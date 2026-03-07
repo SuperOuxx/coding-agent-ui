@@ -126,23 +126,23 @@ export default function EditorSidebar({
   const useFlexLayout = editorExpanded || (fillSpace && !hasManualWidth);
 
   return (
-    <div ref={containerRef} className={`flex h-full flex-shrink-0 min-w-0 ${editorExpanded ? 'flex-1' : ''}`}>
+    <div ref={containerRef} className={`flex h-full min-w-0 flex-shrink-0 ${editorExpanded ? 'flex-1' : ''}`}>
       {!editorExpanded && (
         <div
           ref={resizeHandleRef}
           onMouseDown={onResizeStart}
-          className="flex-shrink-0 w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 dark:hover:bg-blue-600 cursor-col-resize transition-colors relative group"
+          className="group relative w-1 flex-shrink-0 cursor-col-resize bg-gray-200 transition-colors hover:bg-blue-500 dark:bg-gray-700 dark:hover:bg-blue-600"
           title="Drag to resize"
         >
-          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1 bg-blue-500 dark:bg-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-blue-500 opacity-0 transition-opacity group-hover:opacity-100 dark:bg-blue-600" />
         </div>
       )}
 
       <div
-        className={`border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden ${useFlexLayout ? 'flex-1 min-w-0' : `flex-shrink-0 min-w-[${MIN_EDITOR_WIDTH}px]`}`}
+        className={`h-full overflow-hidden border-l border-gray-200 dark:border-gray-700 ${useFlexLayout ? 'min-w-0 flex-1' : `min-w-[ flex-shrink-0${MIN_EDITOR_WIDTH}px]`}`}
         style={useFlexLayout ? undefined : { width: `${effectiveWidth}px`, minWidth: `${MIN_EDITOR_WIDTH}px` }}
       >
-        <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 dark:border-gray-700 px-2 py-1 bg-gray-50 dark:bg-gray-900/40">
+        <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-900/40">
           {openFiles.map((file) => {
             const fileId = file.id ?? `${file.projectName ?? 'project'}:${file.path}`;
             const isActive = fileId === activeFileId;
@@ -151,15 +151,15 @@ export default function EditorSidebar({
             return (
               <div
                 key={fileId}
-                className={`flex items-center rounded-md border min-w-0 ${isActive
-                    ? 'border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800'
+                className={`flex min-w-0 items-center rounded-md border ${isActive
+                    ? 'border-blue-300 bg-white dark:border-blue-700 dark:bg-gray-800'
                     : 'border-transparent bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/60'
                   }`}
               >
                 <button
                   type="button"
                   onClick={() => { void onActivateFile(fileId); }}
-                  className="px-2 py-1 text-xs text-left text-gray-700 dark:text-gray-200 max-w-[170px] truncate"
+                  className="max-w-[170px] truncate px-2 py-1 text-left text-xs text-gray-700 dark:text-gray-200"
                   title={file.path}
                 >
                   {file.name}
@@ -171,10 +171,10 @@ export default function EditorSidebar({
                     event.stopPropagation();
                     void onCloseFile(fileId);
                   }}
-                  className="p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 rounded"
+                  className="rounded p-1 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100"
                   title="Close tab"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="h-3 w-3" />
                 </button>
               </div>
             );

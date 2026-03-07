@@ -5,7 +5,6 @@ import type {
   LoadingSessionsByProject,
   MCPServerStatus,
   SessionWithProvider,
-  TouchHandlerFactory,
 } from '../../types/types';
 import SidebarProjectItem from './SidebarProjectItem';
 import SidebarProjectsState from './SidebarProjectsState';
@@ -51,7 +50,6 @@ export type SidebarProjectListProps = {
   onStartEditingSession: (sessionId: string, initialName: string) => void;
   onCancelEditingSession: () => void;
   onSaveEditingSession: (projectName: string, sessionId: string, summary: string, provider: SessionProvider) => void;
-  touchHandlerFactory: TouchHandlerFactory;
   t: TFunction;
 };
 
@@ -91,7 +89,6 @@ export default function SidebarProjectList({
   onStartEditingSession,
   onCancelEditingSession,
   onSaveEditingSession,
-  touchHandlerFactory,
   t,
 }: SidebarProjectListProps) {
   const state = (
@@ -116,48 +113,47 @@ export default function SidebarProjectList({
   const showProjects = !isLoading && projects.length > 0 && filteredProjects.length > 0;
 
   return (
-    <div className="md:space-y-1 pb-safe-area-inset-bottom">
+    <div className="pb-safe-area-inset-bottom md:space-y-1">
       {!showProjects
         ? state
         : filteredProjects.map((project) => (
-            <SidebarProjectItem
-              key={project.name}
-              project={project}
-              selectedProject={selectedProject}
-              selectedSession={selectedSession}
-              isExpanded={expandedProjects.has(project.name)}
-              isDeleting={deletingProjects.has(project.name)}
-              isStarred={isProjectStarred(project.name)}
-              editingProject={editingProject}
-              editingName={editingName}
-              sessions={getProjectSessions(project)}
-              initialSessionsLoaded={initialSessionsLoaded.has(project.name)}
-              isLoadingSessions={Boolean(loadingSessions[project.name])}
-              currentTime={currentTime}
-              editingSession={editingSession}
-              editingSessionName={editingSessionName}
-              tasksEnabled={tasksEnabled}
-              mcpServerStatus={mcpServerStatus}
-              onEditingNameChange={onEditingNameChange}
-              onToggleProject={onToggleProject}
-              onProjectSelect={onProjectSelect}
-              onToggleStarProject={onToggleStarProject}
-              onStartEditingProject={onStartEditingProject}
-              onCancelEditingProject={onCancelEditingProject}
-              onSaveProjectName={onSaveProjectName}
-              onDeleteProject={onDeleteProject}
-              onSessionSelect={onSessionSelect}
-              onDeleteSession={onDeleteSession}
-              onLoadMoreSessions={onLoadMoreSessions}
-              onNewSession={onNewSession}
-              onEditingSessionNameChange={onEditingSessionNameChange}
-              onStartEditingSession={onStartEditingSession}
-              onCancelEditingSession={onCancelEditingSession}
-              onSaveEditingSession={onSaveEditingSession}
-              touchHandlerFactory={touchHandlerFactory}
-              t={t}
-            />
-          ))}
+          <SidebarProjectItem
+            key={project.name}
+            project={project}
+            selectedProject={selectedProject}
+            selectedSession={selectedSession}
+            isExpanded={expandedProjects.has(project.name)}
+            isDeleting={deletingProjects.has(project.name)}
+            isStarred={isProjectStarred(project.name)}
+            editingProject={editingProject}
+            editingName={editingName}
+            sessions={getProjectSessions(project)}
+            initialSessionsLoaded={initialSessionsLoaded.has(project.name)}
+            isLoadingSessions={Boolean(loadingSessions[project.name])}
+            currentTime={currentTime}
+            editingSession={editingSession}
+            editingSessionName={editingSessionName}
+            tasksEnabled={tasksEnabled}
+            mcpServerStatus={mcpServerStatus}
+            onEditingNameChange={onEditingNameChange}
+            onToggleProject={onToggleProject}
+            onProjectSelect={onProjectSelect}
+            onToggleStarProject={onToggleStarProject}
+            onStartEditingProject={onStartEditingProject}
+            onCancelEditingProject={onCancelEditingProject}
+            onSaveProjectName={onSaveProjectName}
+            onDeleteProject={onDeleteProject}
+            onSessionSelect={onSessionSelect}
+            onDeleteSession={onDeleteSession}
+            onLoadMoreSessions={onLoadMoreSessions}
+            onNewSession={onNewSession}
+            onEditingSessionNameChange={onEditingSessionNameChange}
+            onStartEditingSession={onStartEditingSession}
+            onCancelEditingSession={onCancelEditingSession}
+            onSaveEditingSession={onSaveEditingSession}
+            t={t}
+          />
+        ))}
     </div>
   );
 }

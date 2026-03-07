@@ -133,12 +133,15 @@ export const api = {
       body: JSON.stringify({ path, type }),
     }),
 
-  uploadFiles: (projectName, formData) =>
-    authenticatedFetch(`/api/projects/${projectName}/files/upload`, {
+  uploadFiles: (projectName, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}/files/upload`, {
       method: 'POST',
       body: formData,
       headers: {}, // Let browser set Content-Type for FormData
-    }),
+    });
+  },
 
   initializeUploads: (projectName) =>
     authenticatedFetch(`/api/projects/${encodeURIComponent(projectName)}/files/init`, {
