@@ -56,3 +56,34 @@
 | What's the goal? | Fix thinking/processing stuck lifecycle |
 | What have I learned? | Frontend drops unscoped lifecycle events; backend generic error lacks sessionId |
 | What have I done? | Implemented and verified frontend/backend fixes |
+
+---
+
+## Session: 2026-03-10
+
+### Phase 1: Triage and root-cause expansion
+- **Status:** complete
+- Actions taken:
+  - Confirmed previous lifecycle fix is still present in both frontend and backend.
+  - Verified upstream has no additional unmerged fix for this issue pattern.
+  - Isolated three additional stuck branches: failed WS send, reconnect terminal-event loss, Codex stream inactivity.
+
+### Phase 2: Implementation
+- **Status:** complete
+- Actions taken:
+  - Updated `WebSocketContext.sendMessage` to return success boolean.
+  - Updated composer submit flow to rollback UI state when send fails.
+  - Added loading-time session-status polling in session state hook.
+  - Added Codex stream idle-timeout watchdog and timeout error emission.
+- Files modified:
+  - `src/contexts/WebSocketContext.tsx`
+  - `src/components/chat/hooks/useChatComposerState.ts`
+  - `src/components/chat/hooks/useChatSessionState.ts`
+  - `src/components/chat/types/types.ts`
+  - `src/components/main-content/types/types.ts`
+  - `server/openai-codex.js`
+
+### Verification
+- `npm.cmd run typecheck`: pass
+- `npm.cmd run build`: pass (pre-existing CSS warnings remain)
+- `node --check server/openai-codex.js`: pass

@@ -53,3 +53,31 @@
 
 ## Visual/Browser Findings
 - Not required for current root-cause confirmation.
+
+---
+
+## Session Findings: 2026-03-10 (Codex intermittent stuck)
+
+## New Research Findings
+- Local `upstream/main` comparison: no newer upstream commit beyond the already-included lifecycle fix for this issue class (`main...upstream/main` right side count `0`).
+- Existing frontend/backend lifecycle fix is present in current branch, so the intermittent issue is likely from adjacent branches:
+  - message send attempted while WebSocket is disconnected (UI enters loading, request never actually sent),
+  - terminal events missed during reconnect, with no active status polling,
+  - Codex streamed turn can remain running without terminal events for extended periods.
+- Codex backend (`server/openai-codex.js`) had no idle timeout, so sessions could stay `running` indefinitely when stream activity stalls.
+
+## Implemented Mitigations
+- `sendMessage` now returns a boolean delivery signal (sent vs not sent).
+- Composer submit path now handles send failure immediately:
+  - clears loading/abort state,
+  - clears pending view session,
+  - appends explicit error message to chat.
+- Session state now polls `check-session-status` every 5s while loading (with immediate first poll) for selected/current session.
+- Codex backend now has configurable stream idle timeout:
+  - env: `CODEX_STREAM_IDLE_TIMEOUT_MS` (min 10000, default 120000),
+  - timed-out sessions are aborted, marked non-running, and emit `codex-error` with timeout message.
+
+## Verification Findings (This Session)
+- `npm.cmd run typecheck`: pass.
+- `npm.cmd run build`: pass (same pre-existing CSS/minify warnings).
+- `node --check server/openai-codex.js`: pass.

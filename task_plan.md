@@ -52,3 +52,22 @@ Phase 5
 | Error | Attempt | Resolution |
 |-------|---------|------------|
 | `rg` regex parse error | 1 | Split and correct search expressions |
+
+---
+
+## Session: 2026-03-10 (Codex intermittent stuck re-analysis)
+
+### Goal
+Eliminate intermittent Codex "processing/thinking stuck" states, especially cases that remain stuck after page refresh.
+
+### Phases
+1. Scope and compare with upstream/local fixes - complete
+2. Trace Codex-specific lifecycle and reconnect behavior - complete
+3. Implement guardrails (send ack + status polling + backend timeout) - complete
+4. Validate with static checks and builds - complete
+
+### Key Decisions
+- Keep existing lifecycle fix intact; target new failure branches instead of reverting logic.
+- Add frontend send-ack handling to avoid false loading state when WS send fails.
+- Add loading-phase status polling to recover from missed terminal events.
+- Add Codex stream idle-timeout to prevent indefinitely running sessions.

@@ -17,6 +17,27 @@ import { Codex } from '@openai/codex-sdk';
 
 // Track active sessions
 const activeCodexSessions = new Map();
+const DEFAULT_CODEX_STREAM_IDLE_TIMEOUT_MS = 120000;
+
+function getCodexStreamIdleTimeoutMs() {
+  const rawValue = Number.parseInt(process.env.CODEX_STREAM_IDLE_TIMEOUT_MS || '', 10);
+  if (Number.isFinite(rawValue) && rawValue >= 10000) {
+    return rawValue;
+  }
+  return DEFAULT_CODEX_STREAM_IDLE_TIMEOUT_MS;
+}
+
+function isAbortLikeError(error) {
+  return error?.name === 'AbortError' || String(error?.message || '').toLowerCase().includes('aborted');
+}
+
+function isSessionRunning(session) {
+  return session?.status === 'running';
+}
+
+function isSessionInterrupted(session) {
+  return !session || session.status === 'aborted' || session.status === 'timed_out';
+}
 
 /**
  * Transform Codex SDK event to WebSocket message format
@@ -204,6 +225,10 @@ export async function queryCodex(command, options = {}, ws) {
   let thread;
   let currentSessionId = sessionId;
   const abortController = new AbortController();
+  const streamIdleTimeoutMs = getCodexStreamIdleTimeoutMs();
+  const idleCheckIntervalMs = Math.min(10000, Math.max(3000, Math.floor(streamIdleTimeoutMs / 3)));
+  let lastActivityAt = Date.now();
+  let idleCheckTimer = null;
 
   try {
     // Initialize Codex SDK
@@ -237,6 +262,27 @@ export async function queryCodex(command, options = {}, ws) {
       startedAt: new Date().toISOString()
     });
 
+    idleCheckTimer = setInterval(() => {
+      const session = activeCodexSessions.get(currentSessionId);
+      if (!isSessionRunning(session)) {
+        return;
+      }
+
+      if (Date.now() - lastActivityAt < streamIdleTimeoutMs) {
+        return;
+      }
+
+      session.status = 'timed_out';
+      console.warn(
+        `[Codex] Session ${currentSessionId} timed out after ${streamIdleTimeoutMs}ms without stream activity`,
+      );
+      try {
+        session.abortController?.abort();
+      } catch (abortError) {
+        console.warn(`[Codex] Failed to abort timed out session ${currentSessionId}:`, abortError);
+      }
+    }, idleCheckIntervalMs);
+
     // Send session created event
     sendMessage(ws, {
       type: 'session-created',
@@ -252,9 +298,10 @@ export async function queryCodex(command, options = {}, ws) {
     for await (const event of streamedTurn.events) {
       // Check if session was aborted
       const session = activeCodexSessions.get(currentSessionId);
-      if (!session || session.status === 'aborted') {
+      if (isSessionInterrupted(session)) {
         break;
       }
+      lastActivityAt = Date.now();
 
       if (event.type === 'item.started' || event.type === 'item.updated') {
         continue;
@@ -291,26 +338,31 @@ export async function queryCodex(command, options = {}, ws) {
 
   } catch (error) {
     const session = currentSessionId ? activeCodexSessions.get(currentSessionId) : null;
-    const wasAborted =
-      session?.status === 'aborted' ||
-      error?.name === 'AbortError' ||
-      String(error?.message || '').toLowerCase().includes('aborted');
+    const isAbortError = isAbortLikeError(error);
+    const wasAborted = session?.status === 'aborted' || (!session && isAbortError);
+    const wasTimedOut = session?.status === 'timed_out';
 
     if (!wasAborted) {
+      const errorMessage = wasTimedOut
+        ? `Codex request timed out after ${Math.round(streamIdleTimeoutMs / 1000)}s of inactivity`
+        : error?.message || String(error);
       console.error('[Codex] Error:', error);
       sendMessage(ws, {
         type: 'codex-error',
-        error: error.message,
+        error: errorMessage,
         sessionId: currentSessionId
       });
     }
 
   } finally {
+    if (idleCheckTimer) {
+      clearInterval(idleCheckTimer);
+    }
     // Update session status
     if (currentSessionId) {
       const session = activeCodexSessions.get(currentSessionId);
-      if (session) {
-        session.status = session.status === 'aborted' ? 'aborted' : 'completed';
+      if (isSessionRunning(session)) {
+        session.status = 'completed';
       }
     }
   }
@@ -345,7 +397,7 @@ export function abortCodexSession(sessionId) {
  */
 export function isCodexSessionActive(sessionId) {
   const session = activeCodexSessions.get(sessionId);
-  return session?.status === 'running';
+  return isSessionRunning(session);
 }
 
 /**
@@ -356,7 +408,7 @@ export function getActiveCodexSessions() {
   const sessions = [];
 
   for (const [id, session] of activeCodexSessions.entries()) {
-    if (session.status === 'running') {
+    if (isSessionRunning(session)) {
       sessions.push({
         id,
         status: session.status,
@@ -393,7 +445,7 @@ setInterval(() => {
   const maxAge = 30 * 60 * 1000; // 30 minutes
 
   for (const [id, session] of activeCodexSessions.entries()) {
-    if (session.status !== 'running') {
+    if (!isSessionRunning(session)) {
       const startedAt = new Date(session.startedAt).getTime();
       if (now - startedAt > maxAge) {
         activeCodexSessions.delete(id);

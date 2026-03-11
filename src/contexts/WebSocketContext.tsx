@@ -4,7 +4,7 @@ import { IS_PLATFORM } from '../constants/config';
 
 type WebSocketContextType = {
   ws: WebSocket | null;
-  sendMessage: (message: any) => void;
+  sendMessage: (message: unknown) => boolean;
   latestMessage: any | null;
   isConnected: boolean;
 };
@@ -93,13 +93,15 @@ const useWebSocketProviderState = (): WebSocketContextType => {
     }
   }, [token]); // everytime token changes, we reconnect
 
-  const sendMessage = useCallback((message: any) => {
+  const sendMessage = useCallback((message: unknown): boolean => {
     const socket = wsRef.current;
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
-    } else {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
       console.warn('WebSocket not connected');
+      return false;
     }
+
+    socket.send(JSON.stringify(message));
+    return true;
   }, []);
 
   const value: WebSocketContextType = useMemo(() =>

@@ -40,7 +40,7 @@ interface UseChatComposerStateArgs {
   isLoading: boolean;
   canAbortSession: boolean;
   tokenBudget: Record<string, unknown> | null;
-  sendMessage: (message: unknown) => void;
+  sendMessage: (message: unknown) => boolean;
   sendByCtrlEnter?: boolean;
   onSessionActive?: (sessionId?: string | null) => void;
   onSessionProcessing?: (sessionId?: string | null) => void;
@@ -738,22 +738,23 @@ export function useChatComposerState({
         }
         pendingViewSessionRef.current = { sessionId: null, startedAt: Date.now() };
       }
-      onSessionActive?.(sessionToActivate);
-      if (effectiveSessionId && !isTemporarySessionId(effectiveSessionId)) {
-        onSessionProcessing?.(effectiveSessionId);
-      }
 
       const getToolsSettings = () => {
+        const getSettingsKey = () => {
+          switch (provider) {
+            case 'cursor':
+              return 'cursor-tools-settings';
+            case 'codex':
+              return 'codex-settings';
+            case 'gemini':
+              return 'gemini-settings';
+            default:
+              return 'claude-settings';
+          }
+        };
+
         try {
-          const settingsKey =
-            provider === 'cursor'
-              ? 'cursor-tools-settings'
-              : provider === 'codex'
-                ? 'codex-settings'
-                : provider === 'gemini'
-                  ? 'gemini-settings'
-                  : 'claude-settings';
-          const savedSettings = safeLocalStorage.getItem(settingsKey);
+          const savedSettings = safeLocalStorage.getItem(getSettingsKey());
           if (savedSettings) {
             return JSON.parse(savedSettings);
           }
@@ -770,9 +771,11 @@ export function useChatComposerState({
 
       const toolsSettings = getToolsSettings();
       const resolvedProjectPath = selectedProject.fullPath || selectedProject.path || '';
+      const resume = Boolean(effectiveSessionId);
 
+      let requestPayload: Record<string, unknown>;
       if (provider === 'cursor') {
-        sendMessage({
+        requestPayload = {
           type: 'cursor-command',
           command: messageContent,
           sessionId: effectiveSessionId,
@@ -780,14 +783,14 @@ export function useChatComposerState({
             cwd: resolvedProjectPath,
             projectPath: resolvedProjectPath,
             sessionId: effectiveSessionId,
-            resume: Boolean(effectiveSessionId),
+            resume,
             model: cursorModel,
             skipPermissions: toolsSettings?.skipPermissions || false,
             toolsSettings,
           },
-        });
+        };
       } else if (provider === 'codex') {
-        sendMessage({
+        requestPayload = {
           type: 'codex-command',
           command: messageContent,
           sessionId: effectiveSessionId,
@@ -795,13 +798,13 @@ export function useChatComposerState({
             cwd: resolvedProjectPath,
             projectPath: resolvedProjectPath,
             sessionId: effectiveSessionId,
-            resume: Boolean(effectiveSessionId),
+            resume,
             model: codexModel,
             permissionMode: permissionMode === 'plan' ? 'default' : permissionMode,
           },
-        });
+        };
       } else if (provider === 'gemini') {
-        sendMessage({
+        requestPayload = {
           type: 'gemini-command',
           command: messageContent,
           sessionId: effectiveSessionId,
@@ -809,26 +812,52 @@ export function useChatComposerState({
             cwd: resolvedProjectPath,
             projectPath: resolvedProjectPath,
             sessionId: effectiveSessionId,
-            resume: Boolean(effectiveSessionId),
+            resume,
             model: geminiModel,
             permissionMode,
             toolsSettings,
           },
-        });
+        };
       } else {
-        sendMessage({
+        requestPayload = {
           type: 'claude-command',
           command: messageContent,
           options: {
             projectPath: resolvedProjectPath,
             cwd: resolvedProjectPath,
             sessionId: effectiveSessionId,
-            resume: Boolean(effectiveSessionId),
+            resume,
             toolsSettings,
             permissionMode,
             model: claudeModel,
           },
-        });
+        };
+      }
+
+      const handleSendFailure = () => {
+        pendingViewSessionRef.current = null;
+        setIsLoading(false);
+        setCanAbortSession(false);
+        setClaudeStatus(null);
+        setChatMessages((previous) => [
+          ...previous,
+          {
+            type: 'error',
+            content: 'Connection lost before request was sent. Please wait for reconnect and retry.',
+            timestamp: new Date(),
+          },
+        ]);
+      };
+
+      const sent = sendMessage(requestPayload);
+      if (!sent) {
+        handleSendFailure();
+        return;
+      }
+
+      onSessionActive?.(sessionToActivate);
+      if (effectiveSessionId && !isTemporarySessionId(effectiveSessionId)) {
+        onSessionProcessing?.(effectiveSessionId);
       }
 
       resetComposerState();

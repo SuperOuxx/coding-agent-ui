@@ -23,7 +23,7 @@ interface UseChatSessionStateArgs {
   selectedProject: Project | null;
   selectedSession: ProjectSession | null;
   ws: WebSocket | null;
-  sendMessage: (message: unknown) => void;
+  sendMessage: (message: unknown) => boolean;
   autoScrollToBottom?: boolean;
   externalMessageUpdate?: number;
   processingSessions?: Set<string>;
@@ -461,6 +461,49 @@ export function useChatSessionState({
     sendMessage,
     ws,
   ]);
+
+  useEffect(() => {
+    if (!ws || ws.readyState !== WebSocket.OPEN || !isLoading) {
+      return;
+    }
+
+    const resolveProvider = (): Provider => {
+      const selectedProvider = selectedSession?.__provider as Provider | undefined;
+      if (selectedProvider) {
+        return selectedProvider;
+      }
+      return (localStorage.getItem('selected-provider') as Provider) || 'claude';
+    };
+
+    const resolveStatusSessionId = () => {
+      const pendingSessionId =
+        typeof window !== 'undefined' ? sessionStorage.getItem('pendingSessionId') : null;
+      return selectedSession?.id || currentSessionId || pendingSessionId;
+    };
+
+    const statusSessionId = resolveStatusSessionId();
+
+    if (!statusSessionId || statusSessionId.startsWith('new-session-')) {
+      return;
+    }
+
+    const provider = resolveProvider();
+    const pollSessionStatus = () => {
+      sendMessage({
+        type: 'check-session-status',
+        sessionId: statusSessionId,
+        provider,
+      });
+    };
+
+    // Run once immediately to recover quickly when terminal events were missed.
+    pollSessionStatus();
+    const intervalId = window.setInterval(pollSessionStatus, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [currentSessionId, isLoading, selectedSession?.__provider, selectedSession?.id, sendMessage, ws]);
 
   useEffect(() => {
     if (!externalMessageUpdate || !selectedSession || !selectedProject) {
