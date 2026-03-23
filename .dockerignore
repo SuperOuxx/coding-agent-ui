@@ -1,0 +1,27 @@
+# Git
+.git
+.github
+
+# Node
+node_modules
+npm-debug.log*
+
+# Build output (re-built inside Docker)
+dist
+
+# Test & dev artifacts
+tests
+tmp
+*.log
+*.txt
+
+# Editor / OS
+.vscode
+.idea
+*.DS_Store
+Thumbs.db
+
+# CI / local scripts
+*.bat
+*.sh
+# (docker-entrypoint.sh is copied explicitly in Dockerfile)

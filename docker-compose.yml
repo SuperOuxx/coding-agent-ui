@@ -1,0 +1,65 @@
+version: "3.9"
+
+# =============================================================================
+# coding-agent-ui – docker-compose
+# Usage:
+#   docker compose up -d          # build & start in background
+#   docker compose logs -f        # tail logs
+#   docker compose down           # stop
+#   docker compose pull && docker compose up -d --build  # update
+# =============================================================================
+
+services:
+  coding-agent-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: coding-agent-ui:latest
+    container_name: coding-agent-ui
+
+    # ── Auto-start & restart ─────────────────────────────────────────────────
+    restart: unless-stopped   # auto-restart on crash / docker daemon reboot
+
+    # ── Ports ────────────────────────────────────────────────────────────────
+    ports:
+      - "${PORT:-3001}:3001"      # backend API + WebSocket
+
+    # ── Environment ──────────────────────────────────────────────────────────
+    environment:
+      NODE_ENV: production
+      PORT: "${PORT:-3001}"
+      HOST: "0.0.0.0"
+      # Pass-through variables from host .env (if present)
+      VITE_CONTEXT_WINDOW: "${VITE_CONTEXT_WINDOW:-160000}"
+      CONTEXT_WINDOW: "${CONTEXT_WINDOW:-160000}"
+      # Anthropic / OpenAI keys – supply in your host .env
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+
+    # ── Volumes ───────────────────────────────────────────────────────────────
+    volumes:
+      # Persist the SQLite auth database across container restarts
+      - coding-agent-data:/root/.claude-code-ui
+      # Optional: mount a custom .env at runtime
+      # - ./.env:/app/.env:ro
+      # Optional: mount projects directory so Claude can access local code
+      # - ~/projects:/root/projects
+
+    # ── Health check ──────────────────────────────────────────────────────────
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+    # ── Logging ───────────────────────────────────────────────────────────────
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  coding-agent-data:
+    name: coding-agent-data
