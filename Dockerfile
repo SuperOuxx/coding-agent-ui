@@ -31,7 +31,7 @@ WORKDIR /app
 RUN git clone https://github.com/SuperOuxx/coding-agent-ui.git .
 
 # install codex
-npm install -g @openai/codex
+RUN npm install -g @openai/codex
 
 # ---------------------------------------------------------------------------
 # Install Node.js dependencies & build frontend
