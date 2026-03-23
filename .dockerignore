@@ -24,4 +24,5 @@ Thumbs.db
 # CI / local scripts
 *.bat
 *.sh
-# (docker-entrypoint.sh is copied explicitly in Dockerfile)
+# Keep the entrypoint script – it is COPY'd explicitly in Dockerfile
+!docker-entrypoint.sh
